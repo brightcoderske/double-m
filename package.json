@@ -1,0 +1,39 @@
+{
+  "name": "double-m-agency-platform",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev --webpack",
+    "dev:all": "concurrently -n WEB,API -c magenta,cyan \"npm run dev\" \"npm run backend:dev\"",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint . --ignore-pattern .next",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:start": "npm --prefix backend start"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "concurrently": "^9.1.2",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "hermes-parser": "^0.37.0",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3"
+  },
+  "type": "module",
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "^16.2.6"
+  }
+}
