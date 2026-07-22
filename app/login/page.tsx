@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { SimpleHeader } from "../components/simple-header";
 import { GoogleSignIn } from "../components/google-sign-in";
+import { PasswordField } from "../components/password-field";
 export default function Login() {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -48,9 +49,8 @@ export default function Login() {
           </label>
           <label>
             Password
-            <input
+            <PasswordField
               name="password"
-              type="password"
               autoComplete="current-password"
               required
             />

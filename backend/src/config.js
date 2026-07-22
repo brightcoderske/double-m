@@ -23,7 +23,7 @@ export const config = z
     SMTP_PASSWORD: z.string().optional(),
     EMAIL_FROM: z
       .string()
-      .default("Double M Agency <hello@doublemagency.co.ke>"),
+      .default("Double M Agency <support@doublemagency.co.ke>"),
     APP_URL: z.string().url().default("http://localhost:3000"),
     UPLOAD_DIR: z.string().default("./private-uploads"),
   })

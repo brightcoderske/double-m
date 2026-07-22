@@ -2,6 +2,7 @@
 import { FormEvent, Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PasswordField } from "../components/password-field";
 function ResetForm() {
   const token = useSearchParams().get("token") || "";
   const [message, setMessage] = useState("");
@@ -29,9 +30,8 @@ function ResetForm() {
       </p>
       <label>
         New password
-        <input
+        <PasswordField
           name="password"
-          type="password"
           minLength={8}
           pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}"
           required

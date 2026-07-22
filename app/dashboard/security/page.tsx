@@ -1,6 +1,7 @@
 "use client";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordField } from "../../components/password-field";
 export default function Security() {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -30,9 +31,8 @@ export default function Security() {
         </p>
         <label>
           New password
-          <input
+          <PasswordField
             name="password"
-            type="password"
             minLength={8}
             pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}"
             required

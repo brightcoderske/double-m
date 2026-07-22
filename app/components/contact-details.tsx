@@ -5,10 +5,12 @@ type Settings = {
   contact_email?: string;
   office_address?: string;
   business_hours?: string;
+  map_url?: string;
 };
 export function ContactDetails() {
   const [settings, setSettings] = useState<Settings>({
-    contact_email: "hello@doublemagency.co.ke",
+    contact_email: "support@doublemagency.co.ke",
+    office_address: "Kahawa West, Nairobi",
     business_hours: "Monday to Friday, 8:00 AM to 5:00 PM",
   });
   useEffect(() => {
@@ -22,6 +24,10 @@ export function ContactDetails() {
     return () => controller.abort();
   }, []);
   const phone = settings.contact_phone?.trim();
+  const digits = phone?.replace(/\D/g, "") || "";
+  const whatsappNumber = digits.startsWith("0")
+    ? `254${digits.slice(1)}`
+    : digits;
   return (
     <section className="contact-grid shell">
       <article>
@@ -38,7 +44,7 @@ export function ContactDetails() {
         <h2>{phone ? <a href={`tel:${phone}`}>{phone}</a> : "0792613346"}</h2>
         <p>
           {phone ? (
-            <a href={`https://wa.me/${phone.replace(/\D/g, "")}`}>
+            <a href={`https://wa.me/${whatsappNumber}`}>
               Start a WhatsApp conversation
             </a>
           ) : (
@@ -50,7 +56,15 @@ export function ContactDetails() {
       </article>
       <article>
         <span>Office</span>
-        <h2>{settings.office_address || "Kenya"}</h2>
+        <h2>
+          {settings.map_url ? (
+            <a href={settings.map_url} target="_blank" rel="noreferrer">
+              {settings.office_address || "Kahawa West, Nairobi"}
+            </a>
+          ) : (
+            settings.office_address || "Kahawa West, Nairobi"
+          )}
+        </h2>
         <p>Visits are confirmed with the agency before arrival.</p>
       </article>
       <article>

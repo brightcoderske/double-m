@@ -49,7 +49,7 @@ try {
       );
   }
   await conn.execute(
-    "INSERT INTO site_settings(setting_key,setting_value) VALUES('contact_phone','0792613346'),('contact_email','doublemagency56@gmail.com'),('office_address','Kenya'),('business_hours','Monday to Friday, 8:00 AM to 5:00 PM') ON DUPLICATE KEY UPDATE setting_value=IF(setting_value='',VALUES(setting_value),setting_value)",
+    "INSERT INTO site_settings(setting_key,setting_value) VALUES('contact_phone','0792613346'),('contact_email','support@doublemagency.co.ke'),('office_address','Kahawa West, Nairobi'),('business_hours','Monday to Friday, 8:00 AM to 5:00 PM'),('map_url',''),('facebook_url',''),('tiktok_url',''),('youtube_url','') ON DUPLICATE KEY UPDATE setting_value=IF(setting_value='',VALUES(setting_value),setting_value)",
   );
   const [[admin]] = await conn.execute(
     "SELECT id FROM users WHERE email='admin@doublemagency.co.ke'",

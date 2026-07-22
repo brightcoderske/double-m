@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, useState } from "react";
+import { PasswordField } from "./password-field";
 
 export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">(
@@ -69,9 +70,8 @@ export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
         <>
           <label>
             Create password
-            <input
+            <PasswordField
               name="password"
-              type="password"
               autoComplete="new-password"
               minLength={8}
               pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}"

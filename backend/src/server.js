@@ -19,12 +19,24 @@ import { queueEmail, templates } from "./email.js";
 import { scoreCandidate } from "./matching.js";
 const app = express(),
   secret = new TextEncoder().encode(config.JWT_SECRET);
+const configuredFrontend = new URL(config.FRONTEND_URL);
+const allowedOrigins = new Set([configuredFrontend.origin]);
+if (configuredFrontend.hostname.includes(".")) {
+  const alternate = new URL(configuredFrontend.origin);
+  alternate.hostname = configuredFrontend.hostname.startsWith("www.")
+    ? configuredFrontend.hostname.slice(4)
+    : `www.${configuredFrontend.hostname}`;
+  allowedOrigins.add(alternate.origin);
+}
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: config.FRONTEND_URL,
+    origin(origin, done) {
+      if (!origin || allowedOrigins.has(origin)) return done(null, true);
+      return done(new Error("Origin is not permitted."));
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
@@ -1321,7 +1333,7 @@ app.post(
 app.get("/api/v1/settings/public", async (_req, res, next) => {
   try {
     const [rows] = await db().query(
-      "SELECT setting_key,setting_value FROM site_settings WHERE setting_key IN ('contact_phone','contact_email','office_address','business_hours')",
+      "SELECT setting_key,setting_value FROM site_settings WHERE setting_key IN ('contact_phone','contact_email','office_address','business_hours','map_url','facebook_url','tiktok_url','youtube_url')",
     );
     res.json({
       settings: Object.fromEntries(
@@ -1345,6 +1357,10 @@ app.put(
             "contact_email",
             "office_address",
             "business_hours",
+            "map_url",
+            "facebook_url",
+            "tiktok_url",
+            "youtube_url",
           ]),
           z.string().max(500),
         )

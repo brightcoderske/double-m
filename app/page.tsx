@@ -74,16 +74,17 @@ export default function Home() {
         <div className="hero-wash" />
         <div className="shell hero-inner">
           <div className="eyebrow">
-            <span /> Recruitment that puts people first
+            <span /> Recruitment and placement agency · Nairobi, Kenya
           </div>
           <h1>
-            Right people.
+            Trusted staff for homes,
             <br />
-            <em>Real opportunity.</em>
+            <em>farms and businesses.</em>
           </h1>
           <p>
-            We connect homes, farms and businesses with carefully screened
-            people—while helping job seekers find genuine work.
+            Double M Agency screens, matches and places nannies, househelps,
+            caregivers, shamba workers, drivers and business support staff. Job
+            seekers can register for genuine opportunities.
           </p>
           <div className="hero-actions">
             <Link className="button" href="/hire">

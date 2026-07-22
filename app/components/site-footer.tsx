@@ -1,15 +1,20 @@
 "use client";
 import Link from "next/link";
-import { MapPin, MessageCircle } from "lucide-react";
+import { Facebook, MapPin, MessageCircle, Music2, Youtube } from "lucide-react";
 import { useEffect, useState } from "react";
 type Settings = {
   contact_phone?: string;
   contact_email?: string;
   office_address?: string;
+  map_url?: string;
+  facebook_url?: string;
+  tiktok_url?: string;
+  youtube_url?: string;
 };
 export function SiteFooter() {
   const [settings, setSettings] = useState<Settings>({
-    contact_email: "hello@doublemagency.co.ke",
+    contact_email: "support@doublemagency.co.ke",
+    office_address: "Kahawa West, Nairobi",
   });
   useEffect(() => {
     const controller = new AbortController();
@@ -22,7 +27,9 @@ export function SiteFooter() {
     return () => controller.abort();
   }, []);
   const phone = settings.contact_phone?.trim(),
-    whatsapp = phone ? `https://wa.me/${phone.replace(/\D/g, "")}` : "/contact";
+    digits = phone?.replace(/\D/g, "") || "",
+    whatsappNumber = digits.startsWith("0") ? `254${digits.slice(1)}` : digits,
+    whatsapp = phone ? `https://wa.me/${whatsappNumber}` : "/contact";
   return (
     <>
       <footer>
@@ -30,6 +37,41 @@ export function SiteFooter() {
           <div className="footer-brand">
             <b>DOUBLE M AGENCY</b>
             <p>Trusted recruitment for homes, farms and businesses.</p>
+            <div
+              className="social-links"
+              aria-label="Double M Agency social media"
+            >
+              {settings.facebook_url && (
+                <a
+                  href={settings.facebook_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Facebook"
+                >
+                  <Facebook />
+                </a>
+              )}
+              {settings.tiktok_url && (
+                <a
+                  href={settings.tiktok_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="TikTok"
+                >
+                  <Music2 />
+                </a>
+              )}
+              {settings.youtube_url && (
+                <a
+                  href={settings.youtube_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="YouTube"
+                >
+                  <Youtube />
+                </a>
+              )}
+            </div>
           </div>
           <div>
             <h3>Explore</h3>
@@ -47,7 +89,14 @@ export function SiteFooter() {
           <div>
             <h3>Visit or speak to us</h3>
             <p>
-              <MapPin size={16} /> {settings.office_address || "Kenya"}
+              <MapPin size={16} />{" "}
+              {settings.map_url ? (
+                <a href={settings.map_url} target="_blank" rel="noreferrer">
+                  {settings.office_address || "Kahawa West, Nairobi"}
+                </a>
+              ) : (
+                settings.office_address || "Kahawa West, Nairobi"
+              )}
             </p>
             <p>{phone || settings.contact_email}</p>
           </div>

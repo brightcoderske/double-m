@@ -1,5 +1,6 @@
 "use client";
 import { FormEvent, useState } from "react";
+import { PasswordField } from "./password-field";
 export function EmployerAccountForm() {
   const [status, setStatus] = useState("");
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -51,9 +52,8 @@ export function EmployerAccountForm() {
       </label>
       <label>
         Create password
-        <input
+        <PasswordField
           name="password"
-          type="password"
           minLength={8}
           pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}"
           title="Use at least 8 characters with a capital letter, lowercase letter and number."

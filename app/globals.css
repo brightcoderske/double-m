@@ -847,6 +847,58 @@ footer {
 .whatsapp svg {
   width: 19px;
 }
+.password-field {
+  position: relative;
+  display: block;
+}
+.password-field input {
+  width: 100%;
+  padding-right: 48px;
+}
+.password-field button {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #665d67;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.password-field button:hover,
+.password-field button:focus-visible {
+  background: #f3edf2;
+  color: #54134f;
+}
+.password-field button svg {
+  width: 18px;
+}
+.social-links {
+  display: flex;
+  gap: 9px;
+  margin-top: 18px;
+}
+.social-links a {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3d3740;
+  border-radius: 50%;
+}
+.social-links a:hover {
+  border-color: #df1675;
+  color: #fff;
+}
+.social-links svg {
+  width: 17px;
+}
 @media (max-width: 900px) {
   .site-header nav {
     display: none;

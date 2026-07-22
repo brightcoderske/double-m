@@ -1,5 +1,5 @@
 "use client";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 const api = process.env.NEXT_PUBLIC_API_URL;
 async function send(
@@ -20,6 +20,13 @@ async function send(
 }
 export default function AdminControls() {
   const [message, setMessage] = useState("");
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  useEffect(() => {
+    fetch(`${api}/settings/public`, { credentials: "include" })
+      .then((response) => response.json())
+      .then((body) => setSettings(body.settings || {}))
+      .catch(() => {});
+  }, []);
   async function submit(
     e: FormEvent<HTMLFormElement>,
     path: string,
@@ -75,23 +82,71 @@ export default function AdminControls() {
           </label>
           <button>Create staff account</button>
         </form>
-        <form onSubmit={(e) => submit(e, "/admin/settings")}>
+        <form
+          key={JSON.stringify(settings)}
+          onSubmit={(e) => submit(e, "/admin/settings")}
+        >
           <h2>Contact details</h2>
           <label>
             Phone and WhatsApp
-            <input name="contact_phone" />
+            <input name="contact_phone" defaultValue={settings.contact_phone} />
           </label>
           <label>
             Public email
-            <input name="contact_email" type="email" />
+            <input
+              name="contact_email"
+              type="email"
+              defaultValue={
+                settings.contact_email || "support@doublemagency.co.ke"
+              }
+            />
           </label>
           <label>
             Office address
-            <input name="office_address" />
+            <input
+              name="office_address"
+              defaultValue={settings.office_address || "Kahawa West, Nairobi"}
+            />
           </label>
           <label>
             Business hours
-            <input name="business_hours" />
+            <input
+              name="business_hours"
+              defaultValue={settings.business_hours}
+            />
+          </label>
+          <label>
+            Google Maps location link
+            <input
+              name="map_url"
+              type="url"
+              defaultValue={settings.map_url}
+              placeholder="https://maps.google.com/…"
+            />
+          </label>
+          <label>
+            Facebook page
+            <input
+              name="facebook_url"
+              type="url"
+              defaultValue={settings.facebook_url}
+            />
+          </label>
+          <label>
+            TikTok page
+            <input
+              name="tiktok_url"
+              type="url"
+              defaultValue={settings.tiktok_url}
+            />
+          </label>
+          <label>
+            YouTube channel
+            <input
+              name="youtube_url"
+              type="url"
+              defaultValue={settings.youtube_url}
+            />
           </label>
           <button>Publish details</button>
         </form>
