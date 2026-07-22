@@ -29,23 +29,49 @@ export default function ApplicationsPage() {
       </header>
       {error && <p className="form-error">{error}</p>}
       <section className="dash-panel">
-        {items.length ? (
-          <div className="application-cards">
-            {items.map((item) => (
-              <article key={item.id}>
-                <div>
-                  <small>{item.reference_code || "Agency matching"}</small>
-                  <h2>{item.title || "Private agency opportunity"}</h2>
-                  <p>{item.location || "Location shared during matching"}</p>
-                </div>
-                <b className={`status-${item.status}`}>
-                  {item.status.replaceAll("_", " ")}
-                </b>
-                <time>
-                  Updated {new Date(item.updated_at).toLocaleDateString()}
-                </time>
-              </article>
-            ))}
+        {items.filter(
+          (item) => !["rejected", "not_selected"].includes(item.status),
+        ).length ? (
+          <div className="payment-table-wrap">
+            <table className="payment-table">
+              <thead>
+                <tr>
+                  <th>Opportunity</th>
+                  <th>Location</th>
+                  <th>Work type</th>
+                  <th>Progress</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items
+                  .filter(
+                    (item) =>
+                      !["rejected", "not_selected"].includes(item.status),
+                  )
+                  .map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <b>{item.title || "Private agency opportunity"}</b>
+                        <small>
+                          {item.reference_code || "Agency matching"}
+                        </small>
+                      </td>
+                      <td>{item.location || "Shared during matching"}</td>
+                      <td>
+                        {item.employment_type?.replaceAll("_", " ") ||
+                          "To be agreed"}
+                      </td>
+                      <td>
+                        <b className={`status-${item.status}`}>
+                          {friendlyStatus(item.status)}
+                        </b>
+                      </td>
+                      <td>{new Date(item.updated_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="panel-empty">
@@ -58,5 +84,20 @@ export default function ApplicationsPage() {
         )}
       </section>
     </main>
+  );
+}
+
+function friendlyStatus(status: string) {
+  return (
+    (
+      {
+        submitted: "Application received",
+        under_review: "Under agency review",
+        shortlisted: "Shortlisted",
+        interview: "Interview stage",
+        offered: "Placement offered",
+        placed: "Placement confirmed",
+      } as Record<string, string>
+    )[status] || status.replaceAll("_", " ")
   );
 }

@@ -93,7 +93,7 @@ export default function EmployerRequests() {
             I confirm that this request is accurate and may be used for agency
             recruitment and matching.
           </label>
-          <button>Submit and track request</button>
+          <button className="button dark">Submit and track request</button>
         </form>
         <section className="dash-panel">
           <div className="panel-heading">

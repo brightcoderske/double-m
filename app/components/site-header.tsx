@@ -138,23 +138,65 @@ export function SiteHeader() {
       </div>
       {open && (
         <div className="mobile-menu" aria-label="Mobile navigation">
-          <Link onClick={() => setOpen(false)} href="/services">
-            Services
+          <Link onClick={() => setOpen(false)} href="/">
+            Home
           </Link>
+          <details>
+            <summary>
+              Services <ChevronDown />
+            </summary>
+            <div>
+              <Link onClick={() => setOpen(false)} href="/services">
+                All services
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/services#home-care">
+                Home & care staffing
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/services#business">
+                Business staffing
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/hire">
+                Request staff
+              </Link>
+            </div>
+          </details>
           <Link onClick={() => setOpen(false)} href="/jobs">
             Find jobs
           </Link>
-          <Link onClick={() => setOpen(false)} href="/about">
-            About us
-          </Link>
-          <Link onClick={() => setOpen(false)} href="/blog">
-            Resources
-          </Link>
+          <details>
+            <summary>
+              About us <ChevronDown />
+            </summary>
+            <div>
+              <Link onClick={() => setOpen(false)} href="/about">
+                Our story
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/about/founder">
+                Founder
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/testimonials">
+                Testimonials
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/faqs">
+                FAQs
+              </Link>
+            </div>
+          </details>
+          <details>
+            <summary>
+              Resources <ChevronDown />
+            </summary>
+            <div>
+              <Link onClick={() => setOpen(false)} href="/blog">
+                Articles
+              </Link>
+              <Link onClick={() => setOpen(false)} href="/search">
+                Search jobs & articles
+              </Link>
+            </div>
+          </details>
           <Link onClick={() => setOpen(false)} href="/contact">
             Contact
-          </Link>
-          <Link onClick={() => setOpen(false)} href="/search">
-            Search jobs & articles
           </Link>
           <div className="mobile-menu-actions">
             <Link onClick={() => setOpen(false)} href="/login">

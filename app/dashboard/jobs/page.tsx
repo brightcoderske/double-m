@@ -97,6 +97,7 @@ export default function ManageJobs() {
                 <th>Employer</th>
                 <th>Category</th>
                 <th>Location</th>
+                <th>Employer requirements</th>
                 <th>Status</th>
                 <th>Applicants</th>
                 <th>Action</th>
@@ -121,6 +122,7 @@ export default function ManageJobs() {
                   </td>
                   <td>{item.role_needed}</td>
                   <td>{item.location}</td>
+                  <td className="requirements-cell">{item.requirements}</td>
                   <td>
                     <span
                       className={`table-status status-${item.job_status || item.status}`}
@@ -134,14 +136,14 @@ export default function ManageJobs() {
                       className="table-action"
                       onClick={() => setEditor(item)}
                     >
-                      <Eye /> View & review
+                      <Eye /> View, edit & approve
                     </button>
                   </td>
                 </tr>
               ))}
               {!data.requests.length && (
                 <tr>
-                  <td colSpan={7}>No employer requests have been submitted.</td>
+                  <td colSpan={8}>No employer requests have been submitted.</td>
                 </tr>
               )}
             </tbody>

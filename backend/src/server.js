@@ -463,7 +463,7 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
         [u.id],
       );
       const [jobs] = await db().execute(
-        "SELECT reference_code,title,location,employment_type FROM jobs WHERE status='published' ORDER BY created_at DESC LIMIT 6",
+        "SELECT id,reference_code,title,location,employment_type,description FROM jobs WHERE status='published' AND (application_deadline IS NULL OR application_deadline>=CURDATE()) ORDER BY created_at DESC LIMIT 6",
       );
       const [checks] = await db().execute(
         "SELECT check_code,status,note,updated_at FROM candidate_verification_checks WHERE candidate_user_id=? ORDER BY FIELD(check_code,'phone_call','identity','passport_photo','cv','certificates','references','interview','availability')",
@@ -1221,7 +1221,7 @@ app.get("/api/v1/contracts", requireAuth, async (req, res, next) => {
       params = [req.user.id];
     }
     const [contracts] = await db().execute(
-      `SELECT ec.id,ec.contract_number,ec.role_title,ec.salary_amount,ec.agency_fee_amount,ec.candidate_fee_amount,ec.start_date,ec.end_date,ec.status,ec.employer_signed_at,ec.candidate_signed_at,ec.created_at,ec.updated_at,editor.email last_edited_by_email,j.reference_code job_reference,j.title job_title FROM employment_contracts ec LEFT JOIN jobs j ON j.id=ec.job_id LEFT JOIN users editor ON editor.id=ec.last_edited_by ${where} ORDER BY ec.created_at DESC LIMIT 100`,
+      `SELECT ec.id,ec.contract_number,ec.role_title,ec.salary_amount,ec.agency_fee_amount,ec.candidate_fee_amount,ec.start_date,ec.end_date,ec.status,ec.employer_signed_at,ec.candidate_signed_at,ec.created_at,ec.updated_at,editor.email last_edited_by_email,j.reference_code job_reference,j.title job_title,COALESCE(ep.full_name,eu.email) employer_name,COALESCE(cp.full_name,cu.email) candidate_name FROM employment_contracts ec LEFT JOIN jobs j ON j.id=ec.job_id LEFT JOIN users editor ON editor.id=ec.last_edited_by LEFT JOIN users eu ON eu.id=ec.employer_user_id LEFT JOIN employer_profiles ep ON ep.user_id=ec.employer_user_id LEFT JOIN users cu ON cu.id=ec.candidate_user_id LEFT JOIN candidate_profiles cp ON cp.user_id=ec.candidate_user_id ${where} ORDER BY ec.created_at DESC LIMIT 100`,
       params,
     );
     res.json({ contracts });
@@ -2557,19 +2557,43 @@ app.post(
           ]),
         })
         .parse(req.body);
-      await db().execute(
-        "INSERT INTO candidate_documents(candidate_user_id,document_type,storage_key,original_name,mime_type,file_size) VALUES(?,?,?,?,?,?)",
-        [
-          req.user.id,
-          documentType,
-          req.file.filename,
-          req.file.originalname.slice(0, 255),
-          req.file.mimetype,
-          req.file.size,
-        ],
+      const [[existing]] = await db().execute(
+        "SELECT id,storage_key FROM candidate_documents WHERE candidate_user_id=? AND document_type=? ORDER BY created_at DESC LIMIT 1",
+        [req.user.id, documentType],
       );
+      if (existing) {
+        await db().execute(
+          "UPDATE candidate_documents SET storage_key=?,original_name=?,mime_type=?,file_size=?,status='uploaded',reviewed_by=NULL,reviewed_at=NULL,created_at=UTC_TIMESTAMP() WHERE id=?",
+          [
+            req.file.filename,
+            req.file.originalname.slice(0, 255),
+            req.file.mimetype,
+            req.file.size,
+            existing.id,
+          ],
+        );
+        const previousPath = path.join(
+          uploadRoot,
+          path.basename(existing.storage_key),
+        );
+        void unlink(previousPath).catch(() => {});
+      } else {
+        await db().execute(
+          "INSERT INTO candidate_documents(candidate_user_id,document_type,storage_key,original_name,mime_type,file_size) VALUES(?,?,?,?,?,?)",
+          [
+            req.user.id,
+            documentType,
+            req.file.filename,
+            req.file.originalname.slice(0, 255),
+            req.file.mimetype,
+            req.file.size,
+          ],
+        );
+      }
       res.status(201).json({
-        message: "Document uploaded privately and queued for agency review.",
+        message: existing
+          ? "The previous copy was replaced and the new document is ready for review."
+          : "Document uploaded privately and queued for agency review.",
       });
     } catch (e) {
       next(e);

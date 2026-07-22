@@ -34,7 +34,11 @@ const roleItems: Record<string, NavItem[]> = {
       label: "Request staff",
       icon: ClipboardList,
     },
-    { href: "/dashboard/client", label: "Placement support", icon: RefreshCcw },
+    {
+      href: "/dashboard/client",
+      label: "Replacement support",
+      icon: RefreshCcw,
+    },
     { href: "/dashboard/my-contracts", label: "Contracts", icon: FileCheck2 },
   ],
   candidate: [
@@ -43,6 +47,7 @@ const roleItems: Record<string, NavItem[]> = {
       label: "My profile",
       icon: CircleUserRound,
     },
+    { href: "/jobs", label: "Available jobs", icon: BriefcaseBusiness },
     {
       href: "/dashboard/applications",
       label: "Applications",
@@ -56,7 +61,11 @@ const roleItems: Record<string, NavItem[]> = {
       label: "Register client",
       icon: UserCog,
     },
-    { href: "/dashboard/matching", label: "Matching", icon: BriefcaseBusiness },
+    {
+      href: "/dashboard/matching",
+      label: "Candidates & matching",
+      icon: BriefcaseBusiness,
+    },
     { href: "/dashboard/jobs", label: "Job requests", icon: ClipboardList },
     { href: "/dashboard/contracts", label: "Contracts", icon: FileCheck2 },
     { href: "/dashboard/finance", label: "Payments", icon: CreditCard },

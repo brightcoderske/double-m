@@ -56,8 +56,70 @@ export default function MyContracts() {
           and time are recorded against the unchanged contract version.
         </p>
       </header>
-      <section className="dash-panel">
-        <div className="simple-rows">
+      <section className="dash-panel register-panel">
+        <div className="payment-table-wrap">
+          <table className="payment-table">
+            <thead>
+              <tr>
+                <th>Contract</th>
+                <th>Between</th>
+                <th>Term / expiry</th>
+                <th>Signing progress</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((contract) => (
+                <tr key={`table-${contract.id}`}>
+                  <td>
+                    <b>{contract.contract_number}</b>
+                    <small>{contract.role_title}</small>
+                  </td>
+                  <td>
+                    {contract.employer_name || "Employer"}
+                    <small>{contract.candidate_name || "Employee"}</small>
+                  </td>
+                  <td>
+                    {new Date(contract.start_date).toLocaleDateString()} â€“{" "}
+                    {contract.end_date
+                      ? new Date(contract.end_date).toLocaleDateString()
+                      : "Open-ended"}
+                  </td>
+                  <td>
+                    {contract.status === "fully_signed"
+                      ? "Signed by both parties"
+                      : contract.status.replaceAll("_", " ")}
+                  </td>
+                  <td>
+                    <details className="row-actions">
+                      <summary
+                        aria-label={`Actions for ${contract.contract_number}`}
+                      >
+                        â‹®
+                      </summary>
+                      <div>
+                        <button onClick={() => open(contract.id)}>
+                          {contract.status === "fully_signed"
+                            ? "View signed contract"
+                            : "Review & sign"}
+                        </button>
+                        {contract.status === "fully_signed" && (
+                          <a
+                            href={`${process.env.NEXT_PUBLIC_API_URL}/contracts/${contract.id}/pdf`}
+                            download={`${contract.contract_number}.pdf`}
+                          >
+                            Download PDF
+                          </a>
+                        )}
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="simple-rows contract-card-fallback">
           {items.map((c) => (
             <div key={c.id}>
               <b>

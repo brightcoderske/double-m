@@ -7,7 +7,6 @@ import {
   Bell,
   BookOpen,
   BriefcaseBusiness,
-  CalendarClock,
   ChevronRight,
   CircleUserRound,
   ClipboardList,
@@ -17,12 +16,10 @@ import {
   LockKeyhole,
   LogOut,
   MessageCircle,
-  RefreshCcw,
   Search,
   Settings,
   ShieldCheck,
   Sparkles,
-  Star,
   UsersRound,
 } from "lucide-react";
 type Payload = {
@@ -98,23 +95,11 @@ export default function Dashboard() {
               </Link>
               <Link href="/dashboard/client">
                 <UsersRound />
-                Placements
-              </Link>
-              <Link href="/dashboard/client">
-                <CreditCard />
-                Payments
+                Replacement support
               </Link>
               <Link href="/dashboard/my-contracts">
                 <FileCheck2 />
                 My contracts
-              </Link>
-              <Link href="/dashboard/client">
-                <RefreshCcw />
-                Placement support
-              </Link>
-              <Link href="/dashboard/client">
-                <Star />
-                Reviews
               </Link>
               <Link href="/dashboard/knowledge">
                 <BookOpen />
@@ -128,9 +113,9 @@ export default function Dashboard() {
                 <CircleUserRound />
                 My profile
               </Link>
-              <Link href="/jobs">
+              <Link href="#recommended-jobs">
                 <Search />
-                Recommended jobs
+                Available jobs
               </Link>
               <Link href="/dashboard/applications">
                 <BriefcaseBusiness />
@@ -152,33 +137,17 @@ export default function Dashboard() {
           )}
           {["administrator", "agency_staff"].includes(user.role) && (
             <>
-              <Link href="/dashboard/matching">
-                <UsersRound />
-                Candidates
-              </Link>
-              <Link href="/dashboard/jobs">
-                <BriefcaseBusiness />
-                Job requests
-              </Link>
-              <Link href="/dashboard/jobs">
-                <BriefcaseBusiness />
-                Jobs
-              </Link>
-              <Link href="/dashboard/matching">
-                <Sparkles />
-                Matching
-              </Link>
-              <Link href="/dashboard/contracts">
-                <CalendarClock />
-                Interviews
-              </Link>
               <Link href="/dashboard/assisted-registration">
                 <CircleUserRound />
                 Register client
               </Link>
-              <Link href="/dashboard/articles">
-                <FileCheck2 />
-                Articles
+              <Link href="/dashboard/matching">
+                <UsersRound />
+                Candidates & matching
+              </Link>
+              <Link href="/dashboard/jobs">
+                <BriefcaseBusiness />
+                Job requests
               </Link>
               <Link href="/dashboard/contracts">
                 <ClipboardList />
@@ -187,6 +156,10 @@ export default function Dashboard() {
               <Link href="/dashboard/finance">
                 <CreditCard />
                 Payments
+              </Link>
+              <Link href="/dashboard/articles">
+                <FileCheck2 />
+                Articles
               </Link>
               <Link href="/dashboard/knowledge">
                 <BookOpen />
@@ -387,6 +360,13 @@ function ShortlistCandidate({ candidate }: { candidate: any }) {
   );
 }
 function CandidateView({ data }: { data: any }) {
+  const [uploadType, setUploadType] = useState("national_id");
+  const documentTypes: Record<string, string> = {
+    identity: "national_id",
+    passport_photo: "passport_photo",
+    cv: "cv",
+    certificates: "certificate",
+  };
   return (
     <>
       <div className="dash-actions">
@@ -453,14 +433,37 @@ function CandidateView({ data }: { data: any }) {
               (check: any) => check.check_code === code,
             );
             const status = item?.status || "pending";
+            const documentType = documentTypes[code];
+            const uploaded = documentType
+              ? data.documents?.some(
+                  (document: any) => document.document_type === documentType,
+                )
+              : false;
             return (
-              <div key={code}>
+              <button
+                type="button"
+                key={code}
+                className={documentType ? "check-row-action" : undefined}
+                onClick={() => {
+                  if (!documentType) return;
+                  setUploadType(documentType);
+                  document.getElementById("candidate-document-file")?.click();
+                }}
+                disabled={!documentType}
+                title={
+                  documentType
+                    ? `${uploaded ? "Replace" : "Upload"} ${code.replaceAll("_", " ")}`
+                    : undefined
+                }
+              >
                 <FileCheck2 />
                 <span>{code.replaceAll("_", " ")}</span>
                 <b className={`status-${status}`}>
-                  {status.replaceAll("_", " ")}
+                  {uploaded && status === "pending"
+                    ? "uploaded"
+                    : status.replaceAll("_", " ")}
                 </b>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -475,7 +478,10 @@ function CandidateView({ data }: { data: any }) {
           Identity documents stay private and are reviewed only by authorised
           agency staff.
         </div>
-        <DocumentUpload />
+        <DocumentUpload
+          documentType={uploadType}
+          onDocumentTypeChange={setUploadType}
+        />
         {data.documents?.length > 0 && (
           <div className="simple-rows">
             {data.documents.map((doc: any) => (
@@ -553,11 +559,47 @@ function CandidateView({ data }: { data: any }) {
           </span>
         </div>
       </section>
-      <Panel
-        title="Recommended verified jobs"
-        empty="There are no published opportunities matching your profile yet."
-        rows={data.recommendedJobs}
-      />
+      <section className="dash-panel" id="recommended-jobs">
+        <div className="panel-heading">
+          <h2>Available verified jobs</h2>
+          <span>{data.recommendedJobs?.length || 0}</span>
+        </div>
+        {data.recommendedJobs?.length ? (
+          <div className="payment-table-wrap">
+            <table className="payment-table">
+              <thead>
+                <tr>
+                  <th>Role</th>
+                  <th>Location</th>
+                  <th>Work type</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recommendedJobs.map((job: any) => (
+                  <tr key={job.id}>
+                    <td>
+                      <b>{job.title}</b>
+                      <small>{job.reference_code}</small>
+                    </td>
+                    <td>{job.location}</td>
+                    <td>{job.employment_type?.replaceAll("_", " ")}</td>
+                    <td>
+                      <CandidateApply jobId={job.id} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="panel-empty">
+            <p>
+              There are no published opportunities matching your profile yet.
+            </p>
+          </div>
+        )}
+      </section>
       <PaymentTable rows={data.payments} />
     </>
   );
@@ -591,7 +633,35 @@ function StaffView({ data }: { data: any }) {
     </>
   );
 }
-function DocumentUpload() {
+function CandidateApply({ jobId }: { jobId: number }) {
+  const [message, setMessage] = useState("");
+  async function apply() {
+    setMessage("Applyingâ€¦");
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/candidate/jobs/${jobId}/apply`,
+      { method: "POST", credentials: "include" },
+    );
+    const body = await response.json();
+    setMessage(response.ok ? "Applied" : body.message);
+  }
+  return (
+    <button
+      type="button"
+      className="table-action"
+      onClick={apply}
+      disabled={message === "Applied"}
+    >
+      {message || "Apply"}
+    </button>
+  );
+}
+function DocumentUpload({
+  documentType,
+  onDocumentTypeChange,
+}: {
+  documentType: string;
+  onDocumentTypeChange: (value: string) => void;
+}) {
   const [message, setMessage] = useState("");
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -601,11 +671,18 @@ function DocumentUpload() {
       `${process.env.NEXT_PUBLIC_API_URL}/candidate/documents`,
       { method: "POST", credentials: "include", body: form },
     );
-    setMessage((await r.json()).message);
+    const body = await r.json();
+    setMessage(body.message);
+    if (r.ok) window.location.reload();
   }
   return (
     <form className="document-upload" onSubmit={submit}>
-      <select name="documentType" aria-label="Document type">
+      <select
+        name="documentType"
+        aria-label="Document type"
+        value={documentType}
+        onChange={(event) => onDocumentTypeChange(event.target.value)}
+      >
         <option value="national_id">National ID</option>
         <option value="passport_photo">Passport photo</option>
         <option value="cv">CV</option>
@@ -615,6 +692,7 @@ function DocumentUpload() {
         <option value="driving_licence">Driving licence</option>
       </select>
       <input
+        id="candidate-document-file"
         name="document"
         type="file"
         accept="application/pdf,image/jpeg,image/png"
