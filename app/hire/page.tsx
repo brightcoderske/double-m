@@ -1,4 +1,4 @@
-import { PublicForm } from "../components/public-form";
+import { AccountAwareHire } from "../components/account-aware-hire";
 import { SimpleHeader } from "../components/simple-header";
 export const metadata = { title: "Request staff" };
 export default function Hire() {
@@ -17,7 +17,7 @@ export default function Hire() {
         <section className="form-panel">
           <h2>Request a worker</h2>
           <p>Only necessary details are collected at this stage.</p>
-          <PublicForm kind="employer" />
+          <AccountAwareHire />
         </section>
       </main>
     </>

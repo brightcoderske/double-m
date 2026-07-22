@@ -32,6 +32,36 @@ export const templates = {
       `${config.APP_URL}/dashboard`,
     ),
   }),
+  staffingRequestReceived: (name, reference, role) => ({
+    subject: `Staffing request received: ${reference}`,
+    html: frame(
+      `Your request ${reference} is now tracked`,
+      `Thank you, ${name}`,
+      `<p style="line-height:1.7">We have received your request for <b>${escape(role)}</b>. Our team will review the duties, location and timing before approving it for matching.</p><p style="line-height:1.7">You can follow each stage from your employer workspace. We will contact you if anything needs clarification.</p>`,
+      "Track my request",
+      `${config.APP_URL}/dashboard/requests`,
+    ),
+  }),
+  shortlistReady: (reference, role) => ({
+    subject: `Your Double M shortlist is ready: ${reference}`,
+    html: frame(
+      "Your agency-reviewed shortlist is ready",
+      role,
+      `<p style="line-height:1.7">Our team has reviewed suitable candidates for request <b>${escape(reference)}</b>. Sign in to compare the approved summaries and tell us who you would like to interview.</p>`,
+      "Review my shortlist",
+      `${config.APP_URL}/dashboard`,
+    ),
+  }),
+  staffingRequestApproved: (reference, role) => ({
+    subject: `Your staffing request is approved: ${reference}`,
+    html: frame(
+      "Your request is moving to matching",
+      role,
+      `<p style="line-height:1.7">Request <b>${escape(reference)}</b> has been reviewed and approved. The role is now available to suitable candidates while our team continues screening and matching.</p>`,
+      "Track request progress",
+      `${config.APP_URL}/dashboard/requests`,
+    ),
+  }),
   jobAlert: (title, location) => ({
     subject: `New verified opportunity: ${title}`,
     html: frame(

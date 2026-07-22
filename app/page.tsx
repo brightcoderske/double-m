@@ -19,6 +19,7 @@ import { AutoScrollRail } from "./components/auto-scroll-rail";
 import { HomeArticleRail } from "./components/home-article-rail";
 import { articles } from "./lib/articles";
 import type { Metadata } from "next";
+import { HeroMessage } from "./components/hero-message";
 
 export const metadata: Metadata = {
   title: "Trusted Househelp & Nanny Agency in Nairobi",
@@ -116,16 +117,7 @@ export default function Home() {
           <div className="eyebrow">
             <span /> Recruitment and placement agency · Nairobi, Kenya
           </div>
-          <h1>
-            Trusted staff for homes,
-            <br />
-            <em>farms and businesses.</em>
-          </h1>
-          <p>
-            Double M Agency screens, matches and places nannies, househelps,
-            caregivers, shamba workers, drivers and business support staff. Job
-            seekers can register for genuine opportunities.
-          </p>
+          <HeroMessage />
           <div className="hero-actions">
             <Link className="button" href="/hire">
               I want to hire <ArrowRight size={18} />

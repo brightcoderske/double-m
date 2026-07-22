@@ -16,14 +16,18 @@ const transport = nodemailer.createTransport({
     : undefined,
 });
 async function work() {
+  await db().execute(
+    "UPDATE email_outbox SET status='pending',available_at=UTC_TIMESTAMP(),last_error='Recovered after an interrupted delivery attempt' WHERE status='sending' AND created_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE)",
+  );
   const [rows] = await db().execute(
     "SELECT id,recipient,subject,html FROM email_outbox WHERE status='pending' AND available_at<=UTC_TIMESTAMP() ORDER BY id LIMIT 20",
   );
   for (const mail of rows) {
-    await db().execute(
+    const [claimed] = await db().execute(
       "UPDATE email_outbox SET status='sending',attempts=attempts+1 WHERE id=? AND status='pending'",
       [mail.id],
     );
+    if (!claimed.affectedRows) continue;
     try {
       await transport.sendMail({
         from: config.EMAIL_FROM,

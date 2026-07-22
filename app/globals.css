@@ -75,6 +75,33 @@
 .knowledge-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.knowledge-grid article {
+  align-self: start;
+}
+.knowledge-grid .managed-article {
+  margin-top: 20px;
+  padding-top: 8px;
+  border-top: 1px solid #e6dee5;
+  line-height: 1.72;
+}
+.knowledge-grid .managed-article h2,
+.knowledge-grid .managed-article h3 {
+  margin: 22px 0 8px;
+  color: var(--plum);
+  font-family: var(--font-sans);
+}
+.knowledge-grid .managed-article h2 {
+  font-size: 20px;
+}
+.knowledge-grid .managed-article p,
+.knowledge-grid .managed-article li {
+  color: #5f5660;
+  font-size: 14px;
+}
+.knowledge-terms-card {
+  grid-column: 1 / -1;
+  border-top: 4px solid var(--rose) !important;
+}
 .knowledge-grid article form {
   display: grid;
   gap: 12px;
@@ -123,6 +150,17 @@
   }
   .dash-quicklinks div a:hover {
     background: #ffffff14;
+  }
+  .dash-quicklinks div button {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: white;
   }
   .knowledge-grid {
     grid-template-columns: 1fr;
@@ -951,7 +989,8 @@ footer {
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   padding: 8px 2px 26px;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
+  overscroll-behavior-inline: contain;
 }
 .home-article-rail::-webkit-scrollbar,
 .services-window .services::-webkit-scrollbar {
@@ -1027,7 +1066,8 @@ footer {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
+    overscroll-behavior-inline: contain;
     animation: none;
   }
   .services-window .service-card {
@@ -2266,6 +2306,81 @@ footer {
 .dash-top button svg {
   width: 18px;
 }
+.workspace-account-bar > a,
+.account-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.workspace-account-bar svg,
+.account-link svg {
+  width: 18px;
+}
+.workspace-account-bar .account-link span {
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.request-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+.request-workspace-grid form {
+  display: grid;
+  gap: 14px;
+}
+.request-status-list {
+  display: grid;
+  gap: 10px;
+}
+.request-status-list article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.request-status-list small,
+.request-status-list p {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 5px 0 0;
+}
+.request-status-list p {
+  grid-column: 1 / -1;
+}
+.request-status-list > article > span {
+  color: var(--rose);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: capitalize;
+}
+.rotating-role {
+  display: inline-block;
+  animation: role-reveal 0.45s ease both;
+}
+@keyframes role-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hero-inner > p a {
+  color: white;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-weight: 800;
+}
 .user-chip {
   width: 42px;
   height: 42px;
@@ -2545,11 +2660,29 @@ footer {
   .dash-sidebar nav a:nth-child(3) {
     display: flex;
   }
+  .dash-sidebar nav a {
+    flex-direction: column;
+    gap: 2px;
+    font-size: 9px;
+    padding: 5px 8px;
+  }
+  .dash-sidebar nav a svg {
+    width: 20px;
+  }
   .dash-main {
     padding: 25px 18px 95px;
   }
   .dash-top h1 {
     font-size: 30px;
+  }
+  .workspace-account-bar {
+    margin-bottom: 18px;
+  }
+  .workspace-account-bar .account-link span {
+    display: none;
+  }
+  .request-workspace-grid {
+    grid-template-columns: 1fr;
   }
   .security-banner {
     grid-template-columns: auto 1fr;

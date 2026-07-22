@@ -8,20 +8,26 @@ export default function KnowledgePage() {
   const [role, setRole] = useState("");
   const [message, setMessage] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [contractTerms, setContractTerms] = useState<any>(null);
   async function load() {
-    const [knowledgeResponse, dashboardResponse] = await Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/knowledge`, {
-        credentials: "include",
-      }),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard`, {
-        credentials: "include",
-      }),
-    ]);
+    const [knowledgeResponse, dashboardResponse, termsResponse] =
+      await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/knowledge`, {
+          credentials: "include",
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard`, {
+          credentials: "include",
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/knowledge/contract-terms`, {
+          credentials: "include",
+        }),
+      ]);
     const knowledge = await knowledgeResponse.json();
     const dashboard = await dashboardResponse.json();
     if (!knowledgeResponse.ok) throw new Error(knowledge.message);
     setItems(knowledge.items);
     setRole(dashboard.user?.role || "");
+    if (termsResponse.ok) setContractTerms((await termsResponse.json()).terms);
   }
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -72,6 +78,23 @@ export default function KnowledgePage() {
         </p>
       )}
       <div className="knowledge-grid">
+        {contractTerms && (
+          <article className="dash-panel knowledge-terms-card">
+            <small>
+              Contract terms · Version {contractTerms.version} · View only
+            </small>
+            <h2>{contractTerms.title}</h2>
+            <p>
+              This is the current agency master copy. Your own contract will
+              replace the merge fields with the agreed person, role, dates and
+              charges before you accept it.
+            </p>
+            <div
+              className="managed-article"
+              dangerouslySetInnerHTML={{ __html: contractTerms.body }}
+            />
+          </article>
+        )}
         {items.map((item) => (
           <article key={item.id} className="dash-panel">
             <small>

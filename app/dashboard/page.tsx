@@ -92,7 +92,7 @@ export default function Dashboard() {
           </Link>
           {user.role === "employer" && (
             <>
-              <Link href="/dashboard/client">
+              <Link href="/dashboard/requests">
                 <ClipboardList />
                 Requests
               </Link>
@@ -110,7 +110,7 @@ export default function Dashboard() {
               </Link>
               <Link href="/dashboard/client">
                 <RefreshCcw />
-                Replacements
+                Placement support
               </Link>
               <Link href="/dashboard/client">
                 <Star />
@@ -119,10 +119,6 @@ export default function Dashboard() {
               <Link href="/dashboard/knowledge">
                 <BookOpen />
                 Knowledge base
-              </Link>
-              <Link href="/dashboard/activity">
-                <ClipboardList />
-                Staff activity
               </Link>
             </>
           )}
@@ -254,9 +250,13 @@ export default function Dashboard() {
             <button aria-label="Notifications">
               <Bell />
             </button>
-            <span className="user-chip">
+            <Link
+              href="/dashboard/security"
+              className="user-chip"
+              aria-label="Account and security"
+            >
               {user.email.slice(0, 2).toUpperCase()}
-            </span>
+            </Link>
           </div>
         </header>
         {user.forcePasswordChange && (
@@ -286,10 +286,10 @@ function EmployerView({ data }: { data: any }) {
   return (
     <>
       <div className="dash-actions">
-        <Link href="/hire" className="button dark">
+        <Link href="/dashboard/requests" className="button dark">
           New staffing request
         </Link>
-        <Link href="/dashboard/client">Placement support</Link>
+        <Link href="/dashboard/client">Replacement & placement support</Link>
         <Link href="/dashboard/my-contracts">My contracts</Link>
       </div>
       <div className="metric-grid">

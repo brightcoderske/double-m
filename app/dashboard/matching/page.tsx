@@ -96,6 +96,14 @@ export default function Matching() {
               </button>
             )}
           </div>
+          {selected && (
+            <p className="document-note">
+              To accept public applications, create a job linked to request{" "}
+              {selected.reference_code} and publish it from the{" "}
+              <Link href="/dashboard/jobs">job register</Link>. Publishing is
+              the approval step and updates the employer automatically.
+            </p>
+          )}
           {matches.map((item) => (
             <label className="match-row" key={item.candidate.user_id}>
               <input

@@ -439,8 +439,8 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
       const [[requests], [payments], [placements], [replacements]] =
         await Promise.all([
           db().execute(
-            "SELECT reference_code,role_needed,status,created_at FROM staffing_requests WHERE email=? ORDER BY created_at DESC LIMIT 10",
-            [u.email],
+            "SELECT sr.id,sr.reference_code,sr.role_needed,sr.location,sr.status,sr.created_at,j.reference_code job_reference,j.status job_status FROM staffing_requests sr LEFT JOIN jobs j ON j.staffing_request_id=sr.id WHERE sr.employer_user_id=? OR (sr.employer_user_id IS NULL AND sr.email=?) ORDER BY sr.created_at DESC LIMIT 20",
+            [u.id, u.email],
           ),
           db().execute(
             "SELECT ft.reference_code,ft.purpose,ft.amount,ft.currency,ft.method_code,ft.status,ft.paid_at,ft.created_at,r.receipt_number FROM financial_transactions ft LEFT JOIN receipts r ON r.transaction_id=ft.id WHERE ft.payer_user_id=? ORDER BY ft.created_at DESC LIMIT 20",
@@ -558,13 +558,95 @@ app.post("/api/v1/staffing-requests", async (req, res, next) => {
         v.preferredContact,
       ],
     );
-    res
-      .status(201)
-      .json({ reference: ref, message: "Staffing request received." });
+    await queueEmail(
+      v.email,
+      templates.staffingRequestReceived(v.fullName, ref, v.roleNeeded),
+    );
+    res.status(201).json({
+      reference: ref,
+      message: "Staffing request received. A confirmation email is queued.",
+    });
   } catch (e) {
     next(e);
   }
 });
+app.get(
+  "/api/v1/client/staffing-requests",
+  requireAuth,
+  allow("employer"),
+  async (req, res, next) => {
+    try {
+      const [[profiles], [requests]] = await Promise.all([
+        db().execute(
+          "SELECT ep.full_name,ep.phone,ep.organisation,u.email FROM employer_profiles ep JOIN users u ON u.id=ep.user_id WHERE ep.user_id=?",
+          [req.user.id],
+        ),
+        db().execute(
+          "SELECT sr.id,sr.reference_code,sr.role_needed,sr.location,sr.requirements,sr.preferred_contact,sr.status,sr.created_at,j.reference_code job_reference,j.status job_status FROM staffing_requests sr LEFT JOIN jobs j ON j.staffing_request_id=sr.id WHERE sr.employer_user_id=? OR (sr.employer_user_id IS NULL AND sr.email=?) ORDER BY sr.created_at DESC LIMIT 50",
+          [req.user.id, req.user.email],
+        ),
+      ]);
+      res.json({ profile: profiles[0] || null, requests });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.post(
+  "/api/v1/client/staffing-requests",
+  requireAuth,
+  allow("employer"),
+  async (req, res, next) => {
+    try {
+      const value = z
+        .object({
+          roleNeeded: z.string().trim().min(2).max(120),
+          location: z.string().trim().min(2).max(160),
+          requirements: z.string().trim().min(20).max(4000),
+          preferredContact: z.enum(["phone", "email", "whatsapp"]),
+          privacyConsent: z.literal("true"),
+        })
+        .parse(req.body);
+      const [profiles] = await db().execute(
+        "SELECT full_name,phone FROM employer_profiles WHERE user_id=? LIMIT 1",
+        [req.user.id],
+      );
+      if (!profiles[0])
+        return res.status(409).json({
+          message: "Complete your employer account before requesting staff.",
+        });
+      const reference = `DM-${new Date().getUTCFullYear()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      await db().execute(
+        "INSERT INTO staffing_requests(employer_user_id,reference_code,full_name,phone,email,role_needed,location,requirements,preferred_contact) VALUES(?,?,?,?,?,?,?,?,?)",
+        [
+          req.user.id,
+          reference,
+          profiles[0].full_name,
+          profiles[0].phone || "Contact through account",
+          req.user.email,
+          value.roleNeeded,
+          value.location,
+          value.requirements,
+          value.preferredContact,
+        ],
+      );
+      await queueEmail(
+        req.user.email,
+        templates.staffingRequestReceived(
+          profiles[0].full_name,
+          reference,
+          value.roleNeeded,
+        ),
+      );
+      res.status(201).json({
+        reference,
+        message: "Your request is now tracked in this workspace.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.post(
   "/api/v1/client/replacements",
   requireAuth,
@@ -691,9 +773,10 @@ app.post(
         ref = `JOB-${new Date().getUTCFullYear()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`,
         conn = await db().getConnection();
       let employerUserId = v.employerUserId || null;
+      let requestInfo = null;
       if (v.staffingRequestId) {
         const [requests] = await db().execute(
-          "SELECT u.id employer_user_id FROM staffing_requests sr LEFT JOIN users u ON u.email=sr.email AND u.role='employer' WHERE sr.id=? AND sr.status NOT IN ('closed','cancelled') LIMIT 1",
+          "SELECT COALESCE(sr.employer_user_id,u.id) employer_user_id,sr.email,sr.reference_code,sr.role_needed FROM staffing_requests sr LEFT JOIN users u ON u.email=sr.email AND u.role='employer' WHERE sr.id=? AND sr.status NOT IN ('closed','cancelled') LIMIT 1",
           [v.staffingRequestId],
         );
         if (!requests.length)
@@ -701,6 +784,7 @@ app.post(
             message: "Choose an open recruitment request.",
           });
         const requestEmployerId = requests[0].employer_user_id || null;
+        requestInfo = requests[0];
         if (
           employerUserId &&
           requestEmployerId &&
@@ -745,6 +829,18 @@ app.post(
             v.benefits || null,
           ],
         );
+        if (v.staffingRequestId)
+          await conn.execute(
+            "UPDATE staffing_requests SET employer_user_id=COALESCE(employer_user_id,?),status=?,approved_at=IF(?,UTC_TIMESTAMP(),approved_at),approved_by=IF(?,?,approved_by) WHERE id=?",
+            [
+              employerUserId,
+              v.publish ? "confirmed" : "contacted",
+              v.publish,
+              v.publish,
+              req.user.id,
+              v.staffingRequestId,
+            ],
+          );
         await conn.commit();
       } catch (e) {
         await conn.rollback();
@@ -757,6 +853,14 @@ app.post(
         [req.user.id, String(jobId), ref, employerUserId],
       );
       if (v.publish) {
+        if (requestInfo)
+          await queueEmail(
+            requestInfo.email,
+            templates.staffingRequestApproved(
+              requestInfo.reference_code,
+              requestInfo.role_needed,
+            ),
+          );
         const [alerts] = await db().query(
           "SELECT u.email FROM users u JOIN job_alerts a ON a.user_id=u.id WHERE u.status='active' AND a.enabled=TRUE LIMIT 5000",
         );
@@ -788,7 +892,7 @@ app.get(
           "SELECT u.id,u.email,COALESCE(ep.full_name,u.email) full_name FROM users u LEFT JOIN employer_profiles ep ON ep.user_id=u.id WHERE u.role='employer' AND u.status='active' ORDER BY full_name",
         ),
         db().query(
-          "SELECT sr.id,sr.reference_code,sr.role_needed,sr.location,u.id employer_user_id FROM staffing_requests sr LEFT JOIN users u ON u.email=sr.email AND u.role='employer' WHERE sr.status NOT IN ('closed','cancelled') ORDER BY sr.created_at DESC LIMIT 100",
+          "SELECT sr.id,sr.reference_code,sr.role_needed,sr.location,COALESCE(sr.employer_user_id,u.id) employer_user_id FROM staffing_requests sr LEFT JOIN users u ON u.email=sr.email AND u.role='employer' WHERE sr.status NOT IN ('closed','cancelled') ORDER BY sr.created_at DESC LIMIT 100",
         ),
         db().query(
           "SELECT j.id,j.reference_code,j.title,j.location,j.status,j.created_at,u.email employer_email,creator.email created_by_email FROM jobs j LEFT JOIN users u ON u.id=j.employer_user_id LEFT JOIN users creator ON creator.id=j.created_by ORDER BY j.created_at DESC LIMIT 100",
@@ -1886,7 +1990,7 @@ app.get(
   async (_req, res, next) => {
     try {
       const [requests] = await db().query(
-        "SELECT sr.id,sr.reference_code,sr.role_needed,sr.location,sr.requirements,sr.status,u.id employer_user_id,sr.email FROM staffing_requests sr LEFT JOIN users u ON u.email=sr.email AND u.role='employer' WHERE sr.status IN ('new','contacted','confirmed','matching','shortlisted') ORDER BY sr.created_at DESC LIMIT 100",
+        "SELECT sr.id,sr.reference_code,sr.role_needed,sr.location,sr.requirements,sr.status,COALESCE(sr.employer_user_id,u.id) employer_user_id,sr.email FROM staffing_requests sr LEFT JOIN users u ON u.email=sr.email AND u.role='employer' WHERE sr.status IN ('new','contacted','confirmed','matching','shortlisted') ORDER BY sr.created_at DESC LIMIT 100",
       );
       res.json({ requests });
     } catch (e) {
@@ -1946,11 +2050,18 @@ app.post(
         })
         .parse(req.body);
       const [requests] = await db().execute(
-        "SELECT id,role_needed,location,requirements FROM staffing_requests WHERE id=?",
+        "SELECT id,reference_code,role_needed,location,requirements,email,employer_user_id FROM staffing_requests WHERE id=?",
         [v.staffingRequestId],
       );
       if (!requests[0])
         return res.status(404).json({ message: "Staffing request not found." });
+      if (
+        requests[0].employer_user_id &&
+        Number(requests[0].employer_user_id) !== Number(v.employerUserId)
+      )
+        return res.status(400).json({
+          message: "This request belongs to a different employer account.",
+        });
       const placeholders = v.candidateUserIds.map(() => "?").join(",");
       const [candidates] = await db().execute(
         `SELECT cp.user_id,cp.full_name,cp.profession,cp.location,cp.availability_status FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id AND u.status='active' JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified' JOIN candidate_verification_checks phone_check ON phone_check.candidate_user_id=cp.user_id AND phone_check.check_code='phone_call' AND phone_check.status='verified' WHERE cp.user_id IN (${placeholders}) AND cp.availability_status='available'`,
@@ -1977,6 +2088,10 @@ app.post(
             ],
           );
         }
+        await conn.execute(
+          "UPDATE staffing_requests SET employer_user_id=?,status='shortlisted' WHERE id=?",
+          [v.employerUserId, v.staffingRequestId],
+        );
         await conn.commit();
       } catch (e) {
         await conn.rollback();
@@ -1984,6 +2099,13 @@ app.post(
       } finally {
         conn.release();
       }
+      await queueEmail(
+        requests[0].email,
+        templates.shortlistReady(
+          requests[0].reference_code,
+          requests[0].role_needed,
+        ),
+      );
       res
         .status(201)
         .json({ message: "Approved shortlist shared with the employer." });
@@ -2598,6 +2720,20 @@ app.get("/api/v1/knowledge", requireAuth, async (req, res, next) => {
     next(error);
   }
 });
+app.get(
+  "/api/v1/knowledge/contract-terms",
+  requireAuth,
+  async (_req, res, next) => {
+    try {
+      const [terms] = await db().execute(
+        "SELECT name title,version,terms_html body,updated_at FROM contract_templates WHERE is_active=TRUE ORDER BY version DESC LIMIT 1",
+      );
+      res.json({ terms: terms[0] || null });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.post(
   "/api/v1/knowledge/:id/acknowledge",
   requireAuth,
