@@ -7,7 +7,7 @@ const groups = [
       "Caregivers and elderly-care assistants",
       "Nannies and child-care support",
       "House managers, cooks and cleaners",
-      "Drivers, gardeners and shamba workers",
+      "Drivers, gardeners and shamba boys",
     ],
   },
   {

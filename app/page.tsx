@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     "dayburg nanny Nairobi",
     "caregivers Nairobi",
     "house managers Kenya",
-    "shamba workers Kenya",
+    "shamba boys Kenya",
     "domestic workers Kenya",
   ],
   alternates: { canonical: "/" },
@@ -45,7 +45,7 @@ const services = [
   },
   {
     icon: UsersRound,
-    title: "Shamba workers & drivers",
+    title: "Shamba boys & drivers",
     text: "Dependable shamba boys, farm workers, drivers, security staff and hands-on support workers.",
   },
   {
@@ -192,8 +192,7 @@ export default function Home() {
             <Check /> Experienced house managers for organised homes
           </li>
           <li>
-            <Check /> Shamba workers, shop attendants and reliable business
-            staff
+            <Check /> Shamba boys, shop attendants and reliable business staff
           </li>
         </ul>
       </section>

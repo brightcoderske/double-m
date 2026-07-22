@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const roles = ["caregivers", "shamba workers", "shop attendants"];
+const roles = ["caregivers", "shamba boys", "shop attendants"];
 
 export function HeroMessage() {
   const [roleIndex, setRoleIndex] = useState(0);

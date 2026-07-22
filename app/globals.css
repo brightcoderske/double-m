@@ -410,7 +410,7 @@ a {
 .hero-inner {
   position: relative;
   z-index: 2;
-  padding-top: 90px;
+  padding-top: 138px;
 }
 .eyebrow,
 .kicker {
@@ -1156,7 +1156,7 @@ footer {
     min-height: 740px;
   }
   .hero-inner {
-    padding-top: 70px;
+    padding-top: 118px;
   }
   .hero h1 {
     font-size: 52px;
@@ -1464,8 +1464,8 @@ footer {
 
 /* Refined landing-page rhythm and interaction */
 :root {
-  --font-sans: var(--font-manrope), Arial, sans-serif;
-  --font-serif: var(--font-lora), Georgia, serif;
+  --font-sans: var(--font-jakarta), Arial, sans-serif;
+  --font-serif: var(--font-editorial), Georgia, serif;
 }
 .site-header {
   position: fixed;

@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
-import { Manrope, Lora } from "next/font/google";
+import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const manrope = Manrope({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-jakarta",
   display: "swap",
 });
-const lora = Lora({
+const editorial = DM_Serif_Display({
   subsets: ["latin"],
-  variable: "--font-lora",
+  weight: "400",
+  variable: "--font-editorial",
   display: "swap",
 });
 
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s | Double M Agency",
   },
   description:
-    "Double M Agency in Kahawa West places vetted househelps, nannies, dayburgs, caregivers, house managers, shamba workers and business staff across Nairobi and Kenya.",
+    "Double M Agency in Kahawa West places vetted househelps, nannies, dayburgs, caregivers, house managers, shamba boys and business staff across Nairobi and Kenya.",
   icons: {
     icon: "/brand/logo.jpeg",
     shortcut: "/brand/logo.jpeg",
@@ -46,7 +47,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${lora.variable}`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${jakarta.variable} ${editorial.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

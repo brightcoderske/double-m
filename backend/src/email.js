@@ -1,5 +1,17 @@
 import { db } from "./db.js";
 import { config } from "./config.js";
+import nodemailer from "nodemailer";
+
+const transport = config.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: config.SMTP_HOST,
+      port: config.SMTP_PORT,
+      secure: config.SMTP_SECURE === "true",
+      auth: config.SMTP_USER
+        ? { user: config.SMTP_USER, pass: config.SMTP_PASSWORD }
+        : undefined,
+    })
+  : null;
 const escape = (v = "") =>
   String(v).replace(
     /[&<>"']/g,
@@ -84,8 +96,44 @@ export const templates = {
   }),
 };
 export async function queueEmail(recipient, message) {
-  await db().execute(
-    "INSERT INTO email_outbox(recipient,subject,html) VALUES(?,?,?)",
-    [recipient, message.subject, message.html],
-  );
+  let emailId = null;
+  try {
+    const [result] = await db().execute(
+      "INSERT INTO email_outbox(recipient,subject,html,status) VALUES(?,?,?,'sending')",
+      [recipient, message.subject, message.html],
+    );
+    emailId = result.insertId;
+
+    if (!transport) {
+      throw new Error("SMTP is not configured on the backend");
+    }
+
+    await transport.sendMail({
+      from: config.EMAIL_FROM,
+      to: recipient,
+      subject: message.subject,
+      html: message.html,
+    });
+    await db().execute(
+      "UPDATE email_outbox SET status='sent',attempts=1,sent_at=UTC_TIMESTAMP(),last_error=NULL WHERE id=?",
+      [emailId],
+    );
+    return { sent: true, id: emailId };
+  } catch (error) {
+    const reason = String(error?.message || error).slice(0, 1000);
+    if (emailId) {
+      try {
+        await db().execute(
+          "UPDATE email_outbox SET status='failed',attempts=1,last_error=? WHERE id=?",
+          [reason, emailId],
+        );
+      } catch (auditError) {
+        console.error("Could not record email delivery failure", auditError);
+      }
+    }
+    console.error(
+      `Immediate email delivery failed for ${recipient}: ${reason}`,
+    );
+    return { sent: false, id: emailId, error: reason };
+  }
 }
