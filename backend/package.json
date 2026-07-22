@@ -7,7 +7,8 @@
     "dev": "node --watch src/server.js",
     "start": "node app.js",
     "db:migrate": "node src/migrate.js",
-    "db:seed": "node src/seed.js"
+    "db:seed": "node src/seed.js",
+    "db:seed-admin": "node src/seed-admin.js"
   },
   "dependencies": {
     "argon2": "^0.41.1",
