@@ -899,6 +899,141 @@ footer {
 .social-links svg {
   width: 17px;
 }
+.home-trust {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 70px;
+  align-items: center;
+  padding-top: 10px;
+  padding-bottom: 105px;
+}
+.home-trust h2,
+.home-guides h2 {
+  font-size: clamp(34px, 4vw, 52px);
+  margin: 17px 0;
+  letter-spacing: -0.035em;
+}
+.home-trust p {
+  color: var(--muted);
+  line-height: 1.75;
+}
+.home-trust ul {
+  list-style: none;
+  margin: 0;
+  padding: 25px;
+  background: #f6f1eb;
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+}
+.home-trust li {
+  display: grid;
+  grid-template-columns: 25px 1fr;
+  align-items: start;
+  gap: 9px;
+  padding: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.home-trust li svg {
+  width: 20px;
+  color: var(--rose);
+}
+.home-guides {
+  padding-top: 90px;
+  padding-bottom: 90px;
+  overflow: hidden;
+}
+.home-article-rail {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: 8px 2px 26px;
+  touch-action: pan-x;
+}
+.home-article-rail::-webkit-scrollbar,
+.services-window .services::-webkit-scrollbar {
+  display: none;
+}
+.home-article-rail article {
+  flex: 0 0 min(360px, 82vw);
+  scroll-snap-align: start;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  overflow: hidden;
+  padding: 0 24px 25px;
+  background: #fff;
+}
+.home-guide-cover {
+  height: 190px;
+  margin: 0 -24px 22px;
+  background-size: cover;
+  background-position: center;
+}
+.home-article-rail article > span {
+  color: var(--rose);
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.home-article-rail h3 {
+  font-size: 24px;
+  margin: 11px 0;
+}
+.home-article-rail p {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 14px;
+}
+.home-article-rail a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--plum);
+  font-weight: 900;
+  font-size: 13px;
+}
+.home-article-rail a svg {
+  width: 16px;
+}
+@media (max-width: 700px) {
+  .home-trust {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding-top: 0;
+    padding-bottom: 55px;
+  }
+  .home-trust ul {
+    padding: 12px;
+  }
+  .home-guides {
+    width: 100%;
+    padding: 55px 15px;
+  }
+  .home-guides .section-top {
+    align-items: end;
+  }
+  .home-guides h2 {
+    font-size: 32px;
+  }
+  .home-article-rail {
+    margin-right: -15px;
+  }
+  .services-window .services {
+    width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    animation: none;
+  }
+  .services-window .service-card {
+    scroll-snap-align: start;
+  }
+}
 @media (max-width: 900px) {
   .site-header nav {
     display: none;

@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
   ),
   title: {
-    default: "Double M Agency | Trusted Recruitment in Kenya",
+    default: "Double M Agency | Househelps, Nannies & Caregivers in Nairobi",
     template: "%s | Double M Agency",
   },
   description:
-    "Careful, human recruitment for homes, farms and businesses. Find genuine opportunities or request screened staff through Double M Agency.",
+    "Double M Agency in Kahawa West places vetted househelps, nannies, dayburgs, caregivers, house managers, shamba workers and business staff across Nairobi and Kenya.",
   icons: {
     icon: "/brand/logo.jpeg",
     shortcut: "/brand/logo.jpeg",
@@ -30,8 +30,11 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Double M Agency",
-    description: "Right people. Real opportunity.",
+    title: "Double M Agency | Trusted Househelp & Nanny Agency in Nairobi",
+    description:
+      "Vetted househelps, nannies, caregivers and reliable staff, professionally matched and supported from Kahawa West, Nairobi.",
+    url: "/",
+    siteName: "Double M Agency",
     type: "website",
     locale: "en_KE",
   },

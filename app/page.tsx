@@ -15,22 +15,42 @@ import {
 } from "lucide-react";
 import { SiteHeader } from "./components/site-header";
 import { SiteFooter } from "./components/site-footer";
+import { AutoScrollRail } from "./components/auto-scroll-rail";
+import { HomeArticleRail } from "./components/home-article-rail";
+import { articles } from "./lib/articles";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Trusted Househelp & Nanny Agency in Nairobi",
+  description:
+    "Double M Agency in Kahawa West connects Nairobi families with vetted househelps, nannies, dayburg nannies, caregivers and house managers, with professional matching and replacement support.",
+  keywords: [
+    "househelp agency Nairobi",
+    "nanny agency Nairobi",
+    "dayburg nanny Nairobi",
+    "caregivers Nairobi",
+    "house managers Kenya",
+    "shamba workers Kenya",
+    "domestic workers Kenya",
+  ],
+  alternates: { canonical: "/" },
+};
 
 const services = [
   {
     icon: HeartHandshake,
-    title: "Home & care",
-    text: "Caregivers, nannies, house managers, cooks and cleaners.",
+    title: "Househelps, nannies & caregivers",
+    text: "Live-in and dayburg nannies, househelps, house managers, cooks, cleaners and elderly caregivers.",
   },
   {
     icon: UsersRound,
-    title: "Farms & operations",
-    text: "Shamba workers, drivers, security and reliable support teams.",
+    title: "Shamba workers & drivers",
+    text: "Dependable shamba boys, farm workers, drivers, security staff and hands-on support workers.",
   },
   {
     icon: BriefcaseBusiness,
-    title: "Business talent",
-    text: "Office support, hospitality staff and skilled professionals.",
+    title: "Shop & business staff",
+    text: "Shop attendants, office assistants, hospitality workers, sales staff and skilled professionals.",
   },
 ];
 
@@ -58,8 +78,28 @@ const steps = [
 ];
 
 export default function Home() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "EmploymentAgency",
+    name: "Double M Agency",
+    url: "https://www.doublemagency.co.ke",
+    email: "support@doublemagency.co.ke",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: "Kahawa West",
+      addressRegion: "Nairobi",
+      addressCountry: "KE",
+    },
+    areaServed: ["Nairobi", "Kenya"],
+    description:
+      "Househelp, nanny, caregiver, farm worker and business staff recruitment and placement agency in Kahawa West, Nairobi.",
+  };
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <SiteHeader />
 
       <section className="hero">
@@ -111,15 +151,16 @@ export default function Home() {
       <section className="intro shell reveal-section" id="services">
         <div>
           <div className="kicker">What we do</div>
-          <h2>Recruitment built around the work that matters.</h2>
+          <h2>A trusted househelp and nanny placement agency in Nairobi.</h2>
         </div>
         <p>
-          Whether you need one trusted person at home or a dependable team for
-          your organisation, we keep the process clear, careful and human.
+          From our Kahawa West office, we help families and employers find
+          carefully screened people for full-time, part-time, live-in and
+          live-out roles—without making the process complicated.
         </p>
       </section>
       <section className="services-window shell reveal-section">
-        <div className="services">
+        <AutoScrollRail className="services" label="Staffing services">
           {services.map(({ icon: Icon, title, text }, i) => (
             <article className="service-card" key={title}>
               <span className="service-no">0{i + 1}</span>
@@ -131,7 +172,38 @@ export default function Home() {
               </Link>
             </article>
           ))}
+        </AutoScrollRail>
+      </section>
+
+      <section className="home-trust shell reveal-section">
+        <div>
+          <span className="kicker">Why families choose Double M</span>
+          <h2>Carefully vetted. Clearly matched. Supported after placement.</h2>
+          <p>
+            We review identity, experience, references, availability and the
+            practical needs of each role. Employers receive a focused shortlist
+            and can request eligible replacement support under the agreed terms.
+          </p>
         </div>
+        <ul>
+          <li>
+            <Check /> Househelps for cleaning, cooking and daily home routines
+          </li>
+          <li>
+            <Check /> Nannies and dayburgs for childcare, school runs and family
+            support
+          </li>
+          <li>
+            <Check /> Caregivers who support elderly people with dignity
+          </li>
+          <li>
+            <Check /> Experienced house managers for organised homes
+          </li>
+          <li>
+            <Check /> Shamba workers, shop attendants and reliable business
+            staff
+          </li>
+        </ul>
       </section>
 
       <section className="story reveal-section" id="about">
@@ -285,26 +357,24 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="home-article shell reveal-section">
-        <div>
-          <Image
-            src="/images/care-story.webp"
-            fill
-            sizes="(max-width: 700px) 100vw, 48vw"
-            alt="A caregiver supporting everyday life at home"
-          />
-        </div>
-        <article>
-          <span>From our knowledge centre</span>
-          <h2>How to choose the right caregiver</h2>
-          <p>
-            A practical guide to defining the role, assessing trust and choosing
-            support that fits the person, home and daily routine.
-          </p>
-          <Link className="arrow-link" href="/blog/choose-the-right-caregiver">
-            Read more <ArrowRight size={18} />
+      <section className="home-guides shell reveal-section">
+        <div className="section-top">
+          <div>
+            <div className="kicker">Helpful answers</div>
+            <h2>Guidance for homes and job seekers.</h2>
+          </div>
+          <Link className="arrow-link" href="/blog">
+            View all guides <ArrowRight size={18} />
           </Link>
-        </article>
+        </div>
+        <HomeArticleRail
+          initial={articles.map((article) => ({
+            slug: article.slug,
+            title: article.title,
+            excerpt: article.excerpt,
+            cover_image: article.cover,
+          }))}
+        />
       </section>
       <section className="cta">
         <div className="shell cta-inner">

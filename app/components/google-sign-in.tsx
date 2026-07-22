@@ -1,7 +1,7 @@
 "use client";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 declare global {
   interface Window {
     google?: {
@@ -25,8 +25,12 @@ export function GoogleSignIn({ role }: { role?: "candidate" | "employer" }) {
     container = useRef<HTMLDivElement>(null),
     [error, setError] = useState("");
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  function ready() {
-    if (!clientId || !container.current || !window.google) return;
+  const ready = useCallback(() => {
+    if (!clientId) {
+      return;
+    }
+    if (!container.current || !window.google) return;
+    container.current.replaceChildren();
     window.google.accounts.id.initialize({
       client_id: clientId,
       callback: async ({ credential }) => {
@@ -50,26 +54,22 @@ export function GoogleSignIn({ role }: { role?: "candidate" | "employer" }) {
       width: 320,
       text: role ? "signup_with" : "signin_with",
     });
-  }
+  }, [clientId, role, router]);
   return (
     <div className="google-auth-block">
       <div className="auth-divider">
         <span>or</span>
       </div>
-      {clientId ? (
-        <>
-          <Script
-            src="https://accounts.google.com/gsi/client"
-            strategy="afterInteractive"
-            onLoad={ready}
-          />
-          <div className="google-button" ref={container} />
-        </>
-      ) : (
-        <button className="google-button-fallback" type="button" disabled>
-          <span>G</span> {role ? "Sign up with Google" : "Sign in with Google"}
-        </button>
-      )}
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={ready}
+        onReady={ready}
+        onError={() =>
+          setError("Google could not load. Please refresh and try again.")
+        }
+      />
+      <div className="google-button" ref={container} />
       {error && <p className="form-error">{error}</p>}
     </div>
   );
