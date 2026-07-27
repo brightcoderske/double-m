@@ -74,7 +74,7 @@ export default function ReviewModeration() {
                 <tr key={review.id}>
                   <td>
                     <b>{review.reviewer_name}</b>
-                    <small>{review.email}</small>
+                    {review.email && <small>{review.email}</small>}
                   </td>
                   <td>
                     <span className="review-stars">

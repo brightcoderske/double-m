@@ -40,6 +40,7 @@ const roleItems: Record<string, NavItem[]> = {
       icon: RefreshCcw,
     },
     { href: "/dashboard/my-contracts", label: "Contracts", icon: FileCheck2 },
+    { href: "/dashboard/reviews", label: "Leave a review", icon: ShieldCheck },
   ],
   candidate: [
     {
@@ -54,6 +55,7 @@ const roleItems: Record<string, NavItem[]> = {
       icon: BriefcaseBusiness,
     },
     { href: "/dashboard/my-contracts", label: "Contracts", icon: FileCheck2 },
+    { href: "/dashboard/reviews", label: "Leave a review", icon: ShieldCheck },
   ],
   agency_staff: [
     {

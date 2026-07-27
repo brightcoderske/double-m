@@ -11,8 +11,16 @@ type Candidate = {
   location: string;
   best_role?: string;
   education_level?: string;
+  county?: string;
+  languages?: string;
+  experience_summary?: string;
+  skills_summary?: string;
+  other_roles?: string;
+  available_from?: string;
+  age?: number;
   work_arrangement?: string;
   profile_image?: string;
+  is_verified: number;
 };
 
 export function AvailableCandidateRail() {
@@ -51,8 +59,12 @@ export function AvailableCandidateRail() {
               ) : (
                 <UserRound aria-hidden="true" />
               )}
-              <span>
-                <BadgeCheck /> Verified
+              <span
+                className={
+                  candidate.is_verified ? "is-verified" : "is-enrolled"
+                }
+              >
+                <BadgeCheck /> {candidate.is_verified ? "Verified" : "Enrolled"}
               </span>
             </div>
             <div className="candidate-card-copy">
@@ -88,8 +100,11 @@ export function AvailableCandidateRail() {
             >
               Close
             </button>
-            <span className="verified-heading">
-              <BadgeCheck /> Agency verified
+            <span
+              className={`verified-heading ${selected.is_verified ? "is-verified" : "is-enrolled"}`}
+            >
+              <BadgeCheck />{" "}
+              {selected.is_verified ? "Agency verified" : "Agency enrolled"}
             </span>
             <h2 id="candidate-summary-title">{selected.public_name}</h2>
             <p>
@@ -97,10 +112,40 @@ export function AvailableCandidateRail() {
               available for a suitable placement.
             </p>
             <dl>
+              {selected.age && (
+                <div>
+                  <dt>Age</dt>
+                  <dd>{selected.age} years</dd>
+                </div>
+              )}
+              {selected.county && (
+                <div>
+                  <dt>Home county</dt>
+                  <dd>{selected.county}</dd>
+                </div>
+              )}
+              {selected.languages && (
+                <div>
+                  <dt>Languages</dt>
+                  <dd>{selected.languages}</dd>
+                </div>
+              )}
               <div>
                 <dt>Best suited for</dt>
                 <dd>{selected.best_role || selected.profession}</dd>
               </div>
+              {selected.skills_summary && (
+                <div>
+                  <dt>Excels in</dt>
+                  <dd>{selected.skills_summary}</dd>
+                </div>
+              )}
+              {selected.experience_summary && (
+                <div>
+                  <dt>Work experience</dt>
+                  <dd>{selected.experience_summary}</dd>
+                </div>
+              )}
               {selected.education_level && (
                 <div>
                   <dt>Education</dt>
@@ -113,13 +158,25 @@ export function AvailableCandidateRail() {
                   <dd>{selected.work_arrangement.replaceAll("_", " ")}</dd>
                 </div>
               )}
+              <div>
+                <dt>Availability</dt>
+                <dd>
+                  {selected.available_from
+                    ? new Date(selected.available_from).toLocaleDateString(
+                        "en-KE",
+                        { day: "numeric", month: "short", year: "numeric" },
+                      )
+                    : "Available now"}
+                </dd>
+              </div>
             </dl>
             <a className="button dark" href="/hire">
               Ask Double M about this profile
             </a>
             <small>
-              Private identity documents and sensitive personal details are
-              never displayed publicly.
+              {selected.is_verified
+                ? "Identity verified by authorised agency staff. Private documents and sensitive personal details are never displayed publicly."
+                : "This profile is enrolled and available. Verification is still in progress; private documents and sensitive details remain hidden."}
             </small>
           </section>
         </div>

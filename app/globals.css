@@ -1878,6 +1878,414 @@ footer {
   }
 }
 
+/* Authoritative dialog system: all dashboard and public modals share this surface. */
+.modal-backdrop,
+.workspace-modal,
+.profile-summary-modal,
+.contract-dialog {
+  position: fixed !important;
+  z-index: 500 !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
+  background: rgba(24, 12, 27, 0.72) !important;
+  backdrop-filter: blur(8px) !important;
+}
+.job-editor-modal,
+.workspace-modal-card,
+.profile-summary-modal > section,
+.contract-dialog .contract-sheet {
+  position: relative !important;
+  width: min(860px, 100%) !important;
+  max-height: calc(100dvh - 40px) !important;
+  margin: auto !important;
+  overflow: auto !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 30px 90px rgba(16, 7, 18, 0.34) !important;
+}
+.workspace-modal-card,
+.profile-summary-modal > section {
+  padding: 24px !important;
+}
+.knowledge-modal,
+.contract-dialog .contract-sheet {
+  width: min(1040px, 100%) !important;
+}
+.job-editor-modal > header,
+.contract-toolbar {
+  position: sticky !important;
+  z-index: 4 !important;
+  top: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  margin: 0 !important;
+  padding: 17px 22px !important;
+  border-bottom: 1px solid #e8e0e7 !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  backdrop-filter: blur(12px);
+}
+.job-editor-modal > header h2 {
+  margin: 3px 0 0 !important;
+  color: var(--plum) !important;
+  font-size: 24px !important;
+}
+.job-editor-modal > header button,
+.modal-close,
+.contract-toolbar button {
+  min-width: 38px !important;
+  min-height: 38px !important;
+  padding: 8px 11px !important;
+  border: 1px solid #ddd3dc !important;
+  border-radius: 9px !important;
+  background: #f7f3f6 !important;
+  color: var(--ink) !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+.workspace-modal-card > .modal-close,
+.profile-summary-modal .modal-close {
+  position: sticky !important;
+  z-index: 4;
+  top: 0;
+  float: right;
+}
+.job-editor-modal form,
+.workspace-modal-card form,
+.settings-editor-body form,
+.contract-dialog form {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 20px 22px 24px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+.workspace-modal-card form,
+.contract-dialog form {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+.job-editor-modal form label,
+.workspace-modal-card form label,
+.settings-editor-body form label,
+.contract-dialog form label {
+  display: grid !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  color: #493d49 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+.job-editor-modal form input,
+.job-editor-modal form select,
+.job-editor-modal form textarea,
+.workspace-modal-card form input,
+.workspace-modal-card form select,
+.workspace-modal-card form textarea,
+.settings-editor-body form input,
+.settings-editor-body form select,
+.settings-editor-body form textarea,
+.contract-dialog form input,
+.contract-dialog form select,
+.contract-dialog form textarea {
+  width: 100% !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  border: 1px solid #d8ced7 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: var(--ink) !important;
+  font: 500 14px var(--font-sans) !important;
+  outline: none !important;
+}
+.job-editor-modal form textarea,
+.workspace-modal-card form textarea,
+.settings-editor-body form textarea {
+  min-height: 105px !important;
+  resize: vertical !important;
+}
+.job-editor-modal form input:focus,
+.job-editor-modal form select:focus,
+.job-editor-modal form textarea:focus,
+.workspace-modal-card form input:focus,
+.workspace-modal-card form select:focus,
+.workspace-modal-card form textarea:focus,
+.settings-editor-body form input:focus,
+.settings-editor-body form select:focus,
+.settings-editor-body form textarea:focus {
+  border-color: var(--plum) !important;
+  box-shadow: 0 0 0 3px rgba(84, 19, 79, 0.1) !important;
+}
+.job-editor-modal .field-grid,
+.workspace-modal-card .field-grid,
+.settings-editor-body .field-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+.request-detail-card {
+  margin: 18px 22px 0 !important;
+  padding: 14px !important;
+  border: 1px solid #eadde7 !important;
+  background: linear-gradient(135deg, #fbf4f8, #f3faf8) !important;
+}
+.modal-actions {
+  position: sticky !important;
+  z-index: 3;
+  bottom: -24px !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin: 4px -22px -24px !important;
+  padding: 13px 22px !important;
+  border-top: 1px solid #e8e0e7 !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+}
+.modal-actions button,
+.workspace-modal-card form > button,
+.settings-editor-body form > button,
+.contract-dialog form > button {
+  min-height: 42px !important;
+  padding: 10px 15px !important;
+  border: 1px solid var(--plum) !important;
+  border-radius: 9px !important;
+  background: var(--plum) !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+.modal-actions button:first-child {
+  border-color: #d8ced7 !important;
+  background: #fff !important;
+  color: var(--ink) !important;
+}
+.modal-actions button:nth-child(2) {
+  background: #f3edf2 !important;
+  color: var(--plum) !important;
+}
+.candidate-photo > span.is-enrolled,
+.verified-heading.is-enrolled {
+  color: #78551b !important;
+}
+.candidate-photo > span.is-enrolled {
+  background: #fff8dc !important;
+}
+.review-submit-card {
+  width: min(660px, 100%);
+}
+.review-submit-card form {
+  display: grid;
+  gap: 18px;
+}
+.review-submit-card fieldset {
+  margin: 0;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.review-submit-card legend {
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 900;
+}
+.rating-picker {
+  display: flex;
+  gap: 7px;
+}
+.rating-picker button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #ded4dc;
+  border-radius: 9px;
+  background: #fff;
+  color: #b7adb5;
+  cursor: pointer;
+}
+.rating-picker button.selected {
+  border-color: #e5af1b;
+  background: #fff8dd;
+  color: #e5af1b;
+}
+.rating-picker button.selected svg {
+  fill: currentColor;
+}
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.public-review-section {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(420px, 1.3fr);
+  gap: 34px;
+  align-items: start;
+  padding-top: 60px;
+  padding-bottom: 80px;
+}
+.public-review-section > div:first-child {
+  position: sticky;
+  top: 100px;
+}
+.public-review-section h2 {
+  margin: 10px 0;
+  font-size: 38px;
+}
+.public-review-section > div > p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+.public-review-form {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #e3d9e1;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 16px 45px rgba(48, 22, 46, 0.08);
+}
+.public-review-form label {
+  display: grid;
+  gap: 6px;
+  color: #493d49;
+  font-size: 12px;
+  font-weight: 900;
+}
+.public-review-form input,
+.public-review-form textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #d8ced7;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink);
+  font: 500 14px var(--font-sans);
+}
+.public-review-form textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+.public-review-form fieldset {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.public-review-form legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 900;
+}
+.public-review-form .consent {
+  grid-template-columns: auto 1fr;
+  padding: 12px;
+  border-radius: 9px;
+  background: #f8f4f7;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.public-review-form .consent input {
+  width: 17px;
+  min-height: 17px;
+}
+@media (max-width: 620px) {
+  .modal-backdrop,
+  .workspace-modal,
+  .profile-summary-modal,
+  .contract-dialog {
+    align-items: end !important;
+    padding: 8px !important;
+  }
+  .job-editor-modal,
+  .workspace-modal-card,
+  .profile-summary-modal > section,
+  .contract-dialog .contract-sheet {
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 15px !important;
+  }
+  .job-editor-modal > header,
+  .contract-toolbar {
+    padding: 13px 14px !important;
+  }
+  .job-editor-modal form,
+  .workspace-modal-card form,
+  .settings-editor-body form,
+  .contract-dialog form {
+    padding: 15px !important;
+  }
+  .workspace-modal-card {
+    padding: 15px !important;
+  }
+  .job-editor-modal .field-grid,
+  .workspace-modal-card .field-grid,
+  .settings-editor-body .field-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .modal-actions {
+    bottom: -15px !important;
+    grid-template-columns: 1fr 1fr !important;
+    margin: 2px -15px -15px !important;
+    padding: 11px 15px !important;
+  }
+  .modal-actions .button {
+    grid-column: 1 / -1;
+  }
+  .rating-picker {
+    justify-content: space-between;
+  }
+  .section-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .public-review-section {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding-top: 38px;
+    padding-bottom: 55px;
+  }
+  .public-review-section > div:first-child {
+    position: static;
+  }
+  .public-review-section h2 {
+    font-size: 30px;
+  }
+  .public-review-form {
+    padding: 15px;
+  }
+}
+
+/* JavaScript rail owns motion so touch/trackpad interaction is never resisted. */
+@media (max-width: 620px) {
+  .services-window .services,
+  .story-mobile-track {
+    animation: none !important;
+  }
+  .services-window .services {
+    width: auto !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory;
+    touch-action: pan-x pan-y;
+  }
+  .services-window .service-card {
+    scroll-snap-align: start;
+  }
+}
+
 /* Public, touch-friendly live content rails */
 .legacy-job-empty {
   display: none !important;

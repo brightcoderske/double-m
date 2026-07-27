@@ -396,9 +396,14 @@ export default function Home() {
             <div className="kicker">Verified experiences</div>
             <h2>What clients and placed workers say.</h2>
           </div>
-          <Link className="arrow-link" href="/testimonials">
-            View experiences <ArrowRight size={18} />
-          </Link>
+          <div className="section-actions">
+            <Link className="arrow-link" href="/testimonials">
+              View experiences <ArrowRight size={18} />
+            </Link>
+            <Link className="arrow-link" href="/reviews">
+              Leave a review <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
         <PublicReviewRail />
       </section>

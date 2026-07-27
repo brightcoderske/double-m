@@ -33,7 +33,10 @@ export default function ManageJobs() {
     event.preventDefault();
     setBusy(true);
     setMessage("");
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLButtonElement | null;
     const form = Object.fromEntries(new FormData(event.currentTarget));
+    const shouldPublish = submitter?.value === "true";
     try {
       const response = await fetch(`${api}/staff/jobs`, {
         method: "POST",
@@ -46,7 +49,7 @@ export default function ManageJobs() {
           salaryMin: form.salaryMin || undefined,
           salaryMax: form.salaryMax || undefined,
           applicationDeadline: form.applicationDeadline || undefined,
-          publish: form.publish === "true",
+          publish: shouldPublish,
         }),
       });
       const body = await response.json();
@@ -62,6 +65,19 @@ export default function ManageJobs() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function publishExisting(jobId: number) {
+    setBusy(true);
+    setMessage("Publishing the approved job…");
+    const response = await fetch(`${api}/staff/jobs/${jobId}/publish`, {
+      method: "PUT",
+      credentials: "include",
+    });
+    const body = await response.json();
+    setMessage(body.message);
+    if (response.ok) await load();
+    setBusy(false);
   }
 
   const request = editor === "new" ? null : editor;
@@ -198,6 +214,14 @@ export default function ManageJobs() {
                       <Link className="table-action" href="/jobs">
                         View live
                       </Link>
+                    ) : job.status === "draft" || job.status === "paused" ? (
+                      <button
+                        className="table-action"
+                        onClick={() => publishExisting(job.id)}
+                        disabled={busy}
+                      >
+                        Approve & publish
+                      </button>
                     ) : (
                       <span>Agency record</span>
                     )}

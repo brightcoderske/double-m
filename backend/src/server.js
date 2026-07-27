@@ -58,6 +58,12 @@ const authLimiter = rateLimit({
   limit: 10,
   skipSuccessfulRequests: true,
 });
+const publicReviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
 const cookie = {
   httpOnly: true,
   secure: config.NODE_ENV === "production",
@@ -711,7 +717,7 @@ app.post("/api/v1/client/reviews", requireAuth, async (req, res, next) => {
       })
       .parse(req.body);
     await db().execute(
-      "INSERT INTO reviews(user_id,placement_id,rating,review_text) VALUES(?,?,?,?)",
+      "INSERT INTO reviews(user_id,placement_id,rating,review_text,publication_consent) VALUES(?,?,?,?,TRUE)",
       [req.user.id, v.placementId || null, v.rating, v.reviewText],
     );
     res
@@ -721,6 +727,32 @@ app.post("/api/v1/client/reviews", requireAuth, async (req, res, next) => {
     next(e);
   }
 });
+app.post(
+  "/api/v1/public/reviews",
+  publicReviewLimiter,
+  async (req, res, next) => {
+    try {
+      const value = z
+        .object({
+          reviewerName: z.string().trim().min(2).max(150),
+          rating: z.coerce.number().int().min(1).max(5),
+          reviewText: z.string().trim().min(20).max(100),
+          publicationConsent: z.literal(true),
+        })
+        .parse(req.body);
+      await db().execute(
+        "INSERT INTO reviews(user_id,reviewer_name,rating,review_text,publication_consent,status) VALUES(NULL,?,?,?,TRUE,'pending')",
+        [value.reviewerName, value.rating, value.reviewText],
+      );
+      res.status(201).json({
+        message:
+          "Thank you. Your review was submitted privately for administrator approval.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.get("/api/v1/jobs", async (_req, res, next) => {
   try {
     const [jobs] = await db().execute(
@@ -736,12 +768,14 @@ app.get("/api/v1/public/candidates", async (_req, res, next) => {
     const [candidates] = await db().query(
       `SELECT cp.user_id id,
         CONCAT(SUBSTRING_INDEX(TRIM(cp.full_name),' ',1),' · DM',LPAD(cp.user_id,4,'0')) public_name,
-        cp.profession,cp.location,pref.best_role,pref.work_arrangement,priv.education_level,
+        cp.profession,cp.location,pref.best_role,pref.other_roles,pref.work_arrangement,
+        pref.available_from,priv.education_level,priv.county,priv.languages,
+        priv.experience_summary,priv.skills_summary,
+        CASE WHEN priv.date_of_birth IS NULL THEN NULL ELSE TIMESTAMPDIFF(YEAR,priv.date_of_birth,CURDATE()) END age,
+        EXISTS(SELECT 1 FROM candidate_verification_checks vc WHERE vc.candidate_user_id=cp.user_id AND vc.check_code='identity' AND vc.status='verified') is_verified,
         CASE WHEN photo.id IS NULL THEN NULL ELSE CONCAT('/public/candidates/',cp.user_id,'/photo') END profile_image
        FROM candidate_profiles cp
        JOIN users u ON u.id=cp.user_id AND u.status='active'
-       JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified'
-       JOIN candidate_verification_checks availability_check ON availability_check.candidate_user_id=cp.user_id AND availability_check.check_code='availability' AND availability_check.status='verified'
        LEFT JOIN candidate_preferences pref ON pref.candidate_user_id=cp.user_id
        LEFT JOIN candidate_private_details priv ON priv.candidate_user_id=cp.user_id
        LEFT JOIN candidate_documents photo ON photo.id=(SELECT cd.id FROM candidate_documents cd WHERE cd.candidate_user_id=cp.user_id AND cd.document_type='passport_photo' AND cd.status='verified' ORDER BY cd.created_at DESC LIMIT 1)
@@ -767,8 +801,6 @@ app.get(
        FROM candidate_documents cd
        JOIN candidate_profiles cp ON cp.user_id=cd.candidate_user_id
        JOIN users u ON u.id=cp.user_id AND u.status='active'
-       JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified'
-       JOIN candidate_verification_checks availability_check ON availability_check.candidate_user_id=cp.user_id AND availability_check.check_code='availability' AND availability_check.status='verified'
        WHERE cd.candidate_user_id=? AND cd.document_type='passport_photo' AND cd.status='verified'
          AND cp.availability_status IN ('available','available_from')
        ORDER BY cd.created_at DESC LIMIT 1`,
@@ -795,10 +827,10 @@ app.get("/api/v1/public/reviews", async (_req, res, next) => {
       `SELECT r.id,r.rating,LEFT(r.review_text,100) review_text,
         COALESCE(SUBSTRING_INDEX(TRIM(ep.full_name),' ',1),SUBSTRING_INDEX(TRIM(cp.full_name),' ',1),'Double M client') reviewer_name
        FROM reviews r
-       JOIN users u ON u.id=r.user_id AND u.status='active'
+       LEFT JOIN users u ON u.id=r.user_id
        LEFT JOIN employer_profiles ep ON ep.user_id=r.user_id
        LEFT JOIN candidate_profiles cp ON cp.user_id=r.user_id
-       WHERE r.status='published'
+       WHERE r.status='published' AND r.publication_consent=TRUE
        ORDER BY r.created_at DESC LIMIT 30`,
     );
     res.json({ reviews });
@@ -814,9 +846,9 @@ app.get(
     try {
       const [reviews] = await db().query(
         `SELECT r.id,r.rating,r.review_text,r.status,r.created_at,u.email,
-          COALESCE(ep.full_name,cp.full_name,u.email) reviewer_name
+          COALESCE(ep.full_name,cp.full_name,r.reviewer_name,u.email) reviewer_name
          FROM reviews r
-         JOIN users u ON u.id=r.user_id
+         LEFT JOIN users u ON u.id=r.user_id
          LEFT JOIN employer_profiles ep ON ep.user_id=r.user_id
          LEFT JOIN candidate_profiles cp ON cp.user_id=r.user_id
          ORDER BY FIELD(r.status,'pending','published','rejected'),r.created_at DESC LIMIT 100`,
@@ -1010,6 +1042,72 @@ app.post(
       });
     } catch (e) {
       next(e);
+    }
+  },
+);
+app.put(
+  "/api/v1/staff/jobs/:jobId/publish",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (req, res, next) => {
+    try {
+      const jobId = z.coerce.number().int().positive().parse(req.params.jobId);
+      const [[job]] = await db().execute(
+        `SELECT j.id,j.title,j.location,j.reference_code,j.staffing_request_id,
+          sr.email request_email,sr.reference_code request_reference,sr.role_needed
+         FROM jobs j
+         LEFT JOIN staffing_requests sr ON sr.id=j.staffing_request_id
+         WHERE j.id=? AND j.status IN ('draft','paused') LIMIT 1`,
+        [jobId],
+      );
+      if (!job)
+        return res
+          .status(400)
+          .json({ message: "Only a draft or paused job can be published." });
+      const connection = await db().getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.execute(
+          "UPDATE jobs SET status='published' WHERE id=?",
+          [jobId],
+        );
+        if (job.staffing_request_id)
+          await connection.execute(
+            "UPDATE staffing_requests SET status='confirmed',approved_at=UTC_TIMESTAMP(),approved_by=? WHERE id=?",
+            [req.user.id, job.staffing_request_id],
+          );
+        await connection.execute(
+          "INSERT INTO staff_activity(staff_user_id,action_code,entity_type,entity_id,context) VALUES(?,'job.published','job',?,JSON_OBJECT('reference',?))",
+          [req.user.id, String(jobId), job.reference_code],
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+      if (job.request_email)
+        void queueEmail(
+          job.request_email,
+          templates.staffingRequestApproved(
+            job.request_reference,
+            job.role_needed,
+          ),
+        );
+      const [alerts] = await db().query(
+        "SELECT u.email FROM users u JOIN job_alerts a ON a.user_id=u.id WHERE u.status='active' AND a.enabled=TRUE LIMIT 5000",
+      );
+      for (const recipient of alerts)
+        void queueEmail(
+          recipient.email,
+          templates.jobAlert(job.title, job.location),
+        );
+      res.json({
+        message: "Job approved and published. It is now visible publicly.",
+      });
+    } catch (error) {
+      next(error);
     }
   },
 );
@@ -2225,6 +2323,10 @@ app.post(
           profession: z.string().max(120).optional(),
           dateOfBirth: z.string().optional(),
           educationLevel: z.string().max(120).optional(),
+          county: z.string().max(100).optional(),
+          languages: z.string().max(250).optional(),
+          experienceSummary: z.string().max(250).optional(),
+          skillsSummary: z.string().max(500).optional(),
           temporaryPassword: z.string().min(10).max(128),
         })
         .parse(req.body);
@@ -2250,8 +2352,16 @@ app.post(
             ],
           );
           await conn.execute(
-            "INSERT INTO candidate_private_details(candidate_user_id,date_of_birth,education_level) VALUES(?,?,?)",
-            [created.insertId, v.dateOfBirth || null, v.educationLevel || null],
+            "INSERT INTO candidate_private_details(candidate_user_id,date_of_birth,education_level,county,languages,experience_summary,skills_summary) VALUES(?,?,?,?,?,?,?)",
+            [
+              created.insertId,
+              v.dateOfBirth || null,
+              v.educationLevel || null,
+              v.county || null,
+              v.languages || null,
+              v.experienceSummary || null,
+              v.skillsSummary || null,
+            ],
           );
         } else
           await conn.execute(

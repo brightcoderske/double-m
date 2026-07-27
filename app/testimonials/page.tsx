@@ -1,5 +1,6 @@
 import { PublicPage } from "../components/public-page";
 import { PublicReviewRail } from "../components/public-review-rail";
+import Link from "next/link";
 export const metadata = { title: "Client and candidate experiences" };
 export default function Testimonials() {
   return (
@@ -16,6 +17,9 @@ export default function Testimonials() {
           submit feedback from their secure workspace, and the agency confirms
           consent and the related placement before publishing any review.
         </p>
+        <Link className="button dark" href="/reviews">
+          Leave a review
+        </Link>
       </section>
     </PublicPage>
   );

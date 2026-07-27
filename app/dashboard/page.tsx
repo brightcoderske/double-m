@@ -20,6 +20,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Star,
   UsersRound,
 } from "lucide-react";
 type Payload = {
@@ -105,6 +106,10 @@ export default function Dashboard() {
                 <BookOpen />
                 Knowledge base
               </Link>
+              <Link href="/dashboard/reviews">
+                <Star />
+                Leave a review
+              </Link>
             </>
           )}
           {user.role === "candidate" && (
@@ -132,6 +137,10 @@ export default function Dashboard() {
               <Link href="/dashboard/my-contracts">
                 <ClipboardList />
                 My contracts
+              </Link>
+              <Link href="/dashboard/reviews">
+                <Star />
+                Leave a review
               </Link>
             </>
           )}

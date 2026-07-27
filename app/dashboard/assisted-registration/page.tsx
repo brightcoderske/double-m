@@ -78,6 +78,31 @@ export default function Assisted() {
                   placeholder="For example: secondary school"
                 />
               </label>
+              <label>
+                Home county
+                <input name="county" placeholder="For example: Kakamega" />
+              </label>
+              <label>
+                Languages
+                <input
+                  name="languages"
+                  placeholder="For example: English, Kiswahili"
+                />
+              </label>
+              <label>
+                Work experience
+                <input
+                  name="experienceSummary"
+                  placeholder="For example: 2 years in childcare"
+                />
+              </label>
+              <label>
+                Strongest skills
+                <input
+                  name="skillsSummary"
+                  placeholder="For example: childcare, cooking, housekeeping"
+                />
+              </label>
             </>
           )}
           <label>
