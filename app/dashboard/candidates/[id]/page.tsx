@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { Download, Eye, Search, X } from "lucide-react";
+import { RequestDocumentsDialog } from "../../../components/request-documents-dialog";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 const checkCodes = [
@@ -19,7 +20,8 @@ export default function CandidateReview() {
     [data, setData] = useState<any>(null),
     [message, setMessage] = useState(""),
     [query, setQuery] = useState(""),
-    [preview, setPreview] = useState<any>(null);
+    [preview, setPreview] = useState<any>(null),
+    [requestingDocuments, setRequestingDocuments] = useState(false);
   const load = useCallback(
     async function load() {
       const r = await fetch(
@@ -68,12 +70,7 @@ export default function CandidateReview() {
     setMessage(body.message);
     if (response.ok) void load();
   }
-  async function reviewCandidate(status: string) {
-    const note =
-      status === "needs_documents"
-        ? window.prompt("What should the candidate upload or correct?") || ""
-        : "";
-    if (status === "needs_documents" && !note) return;
+  async function reviewCandidate(status: string, note = "") {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/staff/candidates/${id}/approval`,
       {
@@ -85,7 +82,10 @@ export default function CandidateReview() {
     );
     const body = await response.json();
     setMessage(body.message);
-    if (response.ok) void load();
+    if (response.ok) {
+      setRequestingDocuments(false);
+      void load();
+    }
   }
   if (!data)
     return (
@@ -144,7 +144,7 @@ export default function CandidateReview() {
           <button onClick={() => reviewCandidate("approved")}>
             Approve candidate
           </button>
-          <button onClick={() => reviewCandidate("needs_documents")}>
+          <button onClick={() => setRequestingDocuments(true)}>
             Request documents
           </button>
         </div>
@@ -311,6 +311,13 @@ export default function CandidateReview() {
             </footer>
           </section>
         </div>
+      )}
+      {requestingDocuments && (
+        <RequestDocumentsDialog
+          candidateName={data.profile.full_name}
+          onClose={() => setRequestingDocuments(false)}
+          onSend={(note) => reviewCandidate("needs_documents", note)}
+        />
       )}
       {message && <div className="admin-toast">{message}</div>}
     </main>

@@ -4,6 +4,7 @@
 import { Download, Eye, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { RequestDocumentsDialog } from "../../../components/request-documents-dialog";
 
 const api = process.env.NEXT_PUBLIC_API_URL;
 
@@ -25,6 +26,7 @@ export default function PendingCandidates() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<any>(null);
   const [preview, setPreview] = useState<any>(null);
+  const [requestingDocuments, setRequestingDocuments] = useState(false);
   const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
@@ -71,13 +73,11 @@ export default function PendingCandidates() {
     }
   }
 
-  async function reviewCandidate(status: "approved" | "needs_documents") {
+  async function reviewCandidate(
+    status: "approved" | "needs_documents",
+    note = "",
+  ) {
     if (!selected) return;
-    const note =
-      status === "needs_documents"
-        ? window.prompt("What should the candidate upload or correct?") || ""
-        : "";
-    if (status === "needs_documents" && !note) return;
     const response = await fetch(
       `${api}/staff/candidates/${selected.profile.user_id}/approval`,
       {
@@ -90,6 +90,7 @@ export default function PendingCandidates() {
     const body = await response.json();
     setMessage(body.message);
     if (response.ok) {
+      setRequestingDocuments(false);
       setSelected(null);
       await load();
     }
@@ -311,7 +312,7 @@ export default function PendingCandidates() {
               >
                 Edit profile
               </Link>
-              <button onClick={() => reviewCandidate("needs_documents")}>
+              <button onClick={() => setRequestingDocuments(true)}>
                 Request documents
               </button>
               <button
@@ -357,6 +358,13 @@ export default function PendingCandidates() {
             </footer>
           </section>
         </div>
+      )}
+      {requestingDocuments && selected && (
+        <RequestDocumentsDialog
+          candidateName={selected.profile.full_name}
+          onClose={() => setRequestingDocuments(false)}
+          onSend={(note) => reviewCandidate("needs_documents", note)}
+        />
       )}
       {message && <div className="admin-toast">{message}</div>}
     </main>

@@ -345,6 +345,82 @@
   color: var(--muted);
   font-size: 0.84rem;
 }
+.request-documents-modal {
+  width: min(560px, calc(100vw - 2rem));
+  overflow: hidden;
+  border: 1px solid #e2e7e4;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(20, 24, 22, 0.25);
+}
+.request-documents-modal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid #e4e9e6;
+}
+.request-documents-modal header h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1.25rem;
+}
+.request-documents-modal header span {
+  color: var(--brand);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.request-documents-modal header button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #dce2de;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+.request-documents-modal form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+}
+.request-documents-modal form p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.request-documents-modal label {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 750;
+}
+.request-documents-modal textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #cfd8d2;
+  border-radius: 0.7rem;
+  padding: 0.75rem;
+  font: inherit;
+  line-height: 1.5;
+}
+.request-documents-modal label small {
+  color: var(--muted);
+  font-weight: 500;
+}
+.request-documents-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding-top: 0.2rem;
+}
+.request-documents-modal footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 @media (max-width: 700px) {
   .verification-toolbar {
     grid-template-columns: auto 1fr;
