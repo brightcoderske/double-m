@@ -81,6 +81,7 @@ const roleItems: Record<string, NavItem[]> = {
     { href: "/dashboard/contracts", label: "Contracts", icon: FileCheck2 },
     { href: "/dashboard/finance", label: "Payments", icon: CreditCard },
     { href: "/dashboard/articles", label: "Articles", icon: Newspaper },
+    { href: "/dashboard/admin/reviews", label: "Reviews", icon: ShieldCheck },
     { href: "/dashboard/admin/users", label: "Users & staff", icon: UserCog },
     { href: "/dashboard/admin", label: "System control", icon: Settings },
   ],

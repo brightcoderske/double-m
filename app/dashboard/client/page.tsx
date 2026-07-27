@@ -104,7 +104,17 @@ export default function ClientSupport() {
           </label>
           <label>
             Your experience
-            <textarea name="reviewText" minLength={20} rows={5} required />
+            <textarea
+              name="reviewText"
+              minLength={20}
+              maxLength={100}
+              rows={4}
+              required
+            />
+            <small>
+              20–100 characters. Reviews appear only after administrator
+              approval.
+            </small>
           </label>
           <button>Submit privately</button>
         </form>

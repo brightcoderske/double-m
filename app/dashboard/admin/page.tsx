@@ -126,6 +126,23 @@ export default function AdminControls() {
               ))}
               <tr>
                 <td>
+                  <b>Reviews and ratings</b>
+                </td>
+                <td>Approve star ratings and feedback before publication</td>
+                <td>
+                  <span className="table-status">Administrator</span>
+                </td>
+                <td>
+                  <Link
+                    className="table-action"
+                    href="/dashboard/admin/reviews"
+                  >
+                    <Eye /> Review
+                  </Link>
+                </td>
+              </tr>
+              <tr>
+                <td>
                   <b>Users and staff</b>
                 </td>
                 <td>Review, suspend and manage system accounts</td>

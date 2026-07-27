@@ -1,4 +1,5 @@
 import { PublicPage } from "../components/public-page";
+import { PublicReviewRail } from "../components/public-review-rail";
 export const metadata = { title: "Client and candidate experiences" };
 export default function Testimonials() {
   return (
@@ -8,6 +9,7 @@ export default function Testimonials() {
       intro="Only approved, permission-based reviews from employers and placed candidates are published here."
     >
       <section className="honest-empty shell">
+        <PublicReviewRail />
         <h2>Feedback is verified before publication.</h2>
         <p>
           We do not invent endorsements. Returning clients and placed candidates

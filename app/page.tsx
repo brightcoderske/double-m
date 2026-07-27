@@ -20,6 +20,9 @@ import { HomeArticleRail } from "./components/home-article-rail";
 import { articles } from "./lib/articles";
 import type { Metadata } from "next";
 import { HeroMessage } from "./components/hero-message";
+import { HomeJobRail } from "./components/home-job-rail";
+import { AvailableCandidateRail } from "./components/available-candidate-rail";
+import { PublicReviewRail } from "./components/public-review-rail";
 
 export const metadata: Metadata = {
   title: "Trusted Househelp & Nanny Agency in Nairobi",
@@ -33,6 +36,10 @@ export const metadata: Metadata = {
     "house managers Kenya",
     "shamba boys Kenya",
     "domestic workers Kenya",
+    "looking for a househelp in Nairobi",
+    "looking for a nanny in Kenya",
+    "looking for a job in Nairobi",
+    "available verified househelps",
   ],
   alternates: { canonical: "/" },
 };
@@ -150,8 +157,8 @@ export default function Home() {
         </div>
         <p>
           From our Kahawa West office, we help families and employers find
-          carefully screened people for full-time, part-time, live-in and
-          live-out roles—without making the process complicated.
+          carefully screened professionals for full-time, part-time, live-in,
+          and live-out roles—making the hiring process simple and stress-free.
         </p>
       </section>
       <section className="services-window shell reveal-section">
@@ -183,23 +190,27 @@ export default function Home() {
       <section className="home-trust shell reveal-section">
         <div>
           <span className="kicker">Why families choose Double M</span>
-          <h2>Carefully vetted. Clearly matched. Supported after placement.</h2>
+          <h2>Carefully Vetted. Professionally Matched. Ongoing Support.</h2>
           <p>
-            We review identity, experience, references, availability and the
-            practical needs of each role. Employers receive a focused shortlist
-            and can request eligible replacement support under the agreed terms.
+            We carefully verify every candidate&apos;s identity, experience,
+            references, and availability to ensure they meet the unique needs of
+            your home. Every family receives a carefully selected shortlist, and
+            we continue to provide support after placement, including
+            replacement assistance in line with our service terms.
           </p>
         </div>
         <ul>
           <li>
-            <Check /> Househelps for cleaning, cooking and daily home routines
+            <Check /> Professional househelps for cleaning, cooking, laundry,
+            and everyday household tasks.
           </li>
           <li>
-            <Check /> Nannies and dayburgs for childcare, school runs and family
-            support
+            <Check /> Trusted nannies and dayburgs for childcare, school runs,
+            and family support.
           </li>
           <li>
-            <Check /> Caregivers who support elderly people with dignity
+            <Check /> Compassionate caregivers providing respectful and
+            dignified care for elderly loved ones.
           </li>
           <li>
             <Check /> Experienced house managers for organised homes
@@ -300,6 +311,23 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="available-talent shell reveal-section">
+        <div className="section-top">
+          <div>
+            <div className="kicker">Available, verified talent</div>
+            <h2>Looking for a househelp, nanny or caregiver?</h2>
+            <p>
+              Explore brief, agency-approved profiles of enrolled workers who
+              are ready for a suitable placement.
+            </p>
+          </div>
+          <Link className="arrow-link" href="/hire">
+            Request a shortlist <ArrowRight size={18} />
+          </Link>
+        </div>
+        <AvailableCandidateRail />
+      </section>
+
       <section className="ai-section">
         <div className="shell ai-grid">
           <div className="ai-visual">
@@ -348,7 +376,8 @@ export default function Home() {
             View all jobs <ArrowRight size={18} />
           </Link>
         </div>
-        <div className="empty-jobs">
+        <HomeJobRail />
+        <div className="empty-jobs legacy-job-empty">
           <Search />
           <h3>No published vacancies right now</h3>
           <p>
@@ -359,6 +388,19 @@ export default function Home() {
             Create candidate profile
           </Link>
         </div>
+      </section>
+
+      <section className="home-reviews shell reveal-section">
+        <div className="section-top">
+          <div>
+            <div className="kicker">Verified experiences</div>
+            <h2>What clients and placed workers say.</h2>
+          </div>
+          <Link className="arrow-link" href="/testimonials">
+            View experiences <ArrowRight size={18} />
+          </Link>
+        </div>
+        <PublicReviewRail />
       </section>
 
       <section className="home-guides shell reveal-section">

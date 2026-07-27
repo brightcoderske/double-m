@@ -1878,6 +1878,346 @@ footer {
   }
 }
 
+/* Public, touch-friendly live content rails */
+.legacy-job-empty {
+  display: none !important;
+}
+.available-talent,
+.home-reviews {
+  padding-top: 78px;
+  padding-bottom: 78px;
+}
+.available-talent .section-top p {
+  max-width: 620px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.public-card-rail {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  margin-top: 28px;
+  padding: 4px 2px 14px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y;
+}
+.public-card-rail::-webkit-scrollbar {
+  display: none;
+}
+.public-card-rail > article {
+  flex: 0 0 min(350px, 86vw);
+  scroll-snap-align: start;
+}
+.job-preview-card {
+  display: grid;
+  gap: 12px;
+  min-height: 260px;
+  padding: 23px;
+  border: 1px solid #e7dee6;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fff, #fbf5f9);
+}
+.job-preview-card > span,
+.candidate-card-copy > small {
+  color: var(--rose);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.job-preview-card h3 {
+  margin: 0;
+  font-size: 23px;
+}
+.job-preview-card > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+}
+.job-preview-card small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+}
+.job-preview-card small svg,
+.candidate-card-copy p svg {
+  width: 15px;
+}
+.job-preview-card p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.job-preview-card a,
+.candidate-card-copy button {
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  border: 0;
+  background: transparent;
+  color: var(--plum);
+  font-weight: 900;
+  cursor: pointer;
+}
+.job-preview-card a svg,
+.candidate-card-copy button svg {
+  width: 17px;
+}
+.candidate-public-card {
+  overflow: hidden;
+  border: 1px solid #e7dee6;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(45, 20, 43, 0.08);
+}
+.candidate-photo {
+  position: relative;
+  height: 245px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(145deg, #eee7ec, #f8f3f6);
+}
+.candidate-photo > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.candidate-photo > svg {
+  width: 72px;
+  height: 72px;
+  color: #b7a9b4;
+}
+.candidate-photo > span {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #fff;
+  color: #147252;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.12);
+}
+.candidate-photo > span svg {
+  width: 16px;
+}
+.candidate-card-copy {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+.candidate-card-copy h3 {
+  margin: 0;
+  font-size: 25px;
+}
+.candidate-card-copy p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--muted);
+}
+.candidate-card-copy button {
+  padding: 8px 0 0;
+}
+.profile-summary-modal {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(23, 10, 25, 0.68);
+  backdrop-filter: blur(5px);
+}
+.profile-summary-modal > section {
+  width: min(540px, 100%);
+  padding: 26px;
+  border-radius: 16px;
+  background: #fff;
+}
+.profile-summary-modal h2 {
+  margin: 10px 0;
+  font-size: 34px;
+}
+.profile-summary-modal > section > p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.verified-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #147252;
+  font-size: 12px;
+  font-weight: 900;
+}
+.profile-summary-modal dl {
+  display: grid;
+  gap: 9px;
+  margin: 20px 0;
+}
+.profile-summary-modal dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.profile-summary-modal dt {
+  color: var(--muted);
+}
+.profile-summary-modal dd {
+  margin: 0;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+.profile-summary-modal > section > small {
+  display: block;
+  margin-top: 16px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.review-public-card {
+  position: relative;
+  display: grid;
+  gap: 11px;
+  min-height: 230px;
+  padding: 24px;
+  border-radius: 15px;
+  background: #29182d;
+  color: #fff;
+}
+.review-public-card > svg {
+  width: 30px;
+  color: #e787b7;
+}
+.review-public-card p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+}
+.review-public-card small {
+  color: #cfc2d1;
+}
+.review-stars {
+  display: inline-flex;
+  gap: 2px;
+}
+.review-stars svg {
+  width: 15px;
+  height: 15px;
+  color: #c8bec8;
+}
+.review-stars svg.filled {
+  fill: #f3b91f;
+  color: #f3b91f;
+}
+.blog-banner {
+  position: relative;
+  min-height: 360px;
+  margin-top: 42px;
+  margin-bottom: 38px;
+  overflow: hidden;
+  border-radius: 18px;
+}
+.blog-banner::after {
+  position: absolute;
+  content: "";
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(25, 12, 28, 0.84),
+    rgba(25, 12, 28, 0.16)
+  );
+}
+.blog-banner > img {
+  object-fit: cover;
+}
+.blog-banner > div {
+  position: relative;
+  z-index: 1;
+  width: min(650px, 90%);
+  padding: 70px 55px;
+  color: #fff;
+}
+.blog-banner span {
+  color: #f0a0c7;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.blog-banner h2 {
+  margin: 13px 0 0;
+  font-size: clamp(34px, 4vw, 56px);
+}
+.testimonial-register {
+  padding-top: 20px;
+  padding-bottom: 70px;
+}
+.review-policy {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--cream);
+}
+.review-policy h2 {
+  margin: 0 0 7px;
+  font-size: 20px;
+}
+.review-policy p {
+  margin: 0;
+  color: var(--muted);
+}
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+.table-action.danger {
+  color: #a22738;
+}
+@media (max-width: 700px) {
+  .available-talent,
+  .home-reviews {
+    padding-top: 46px;
+    padding-bottom: 46px;
+  }
+  .public-card-rail {
+    margin-top: 18px;
+  }
+  .public-card-rail > article {
+    flex-basis: min(82vw, 310px);
+  }
+  .candidate-photo {
+    height: 205px;
+  }
+  .blog-banner {
+    min-height: 310px;
+    margin-top: 25px;
+    border-radius: 12px;
+  }
+  .blog-banner > div {
+    padding: 50px 22px;
+  }
+}
+
 /* Compact authenticated workspaces */
 .dashboard-subpage .dash-top,
 .dashboard > .dash-main > .dash-top {

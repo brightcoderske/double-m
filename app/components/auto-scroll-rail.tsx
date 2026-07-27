@@ -38,6 +38,8 @@ export function AutoScrollRail({
     element.addEventListener("pointercancel", resume);
     element.addEventListener("mouseenter", pause);
     element.addEventListener("mouseleave", resume);
+    element.addEventListener("focusin", pause);
+    element.addEventListener("focusout", resume);
     return () => {
       window.clearInterval(timer);
       element.removeEventListener("pointerdown", pause);
@@ -45,10 +47,29 @@ export function AutoScrollRail({
       element.removeEventListener("pointercancel", resume);
       element.removeEventListener("mouseenter", pause);
       element.removeEventListener("mouseleave", resume);
+      element.removeEventListener("focusin", pause);
+      element.removeEventListener("focusout", resume);
     };
   }, []);
   return (
-    <div ref={rail} className={className} aria-label={label} tabIndex={0}>
+    <div
+      ref={rail}
+      className={className}
+      aria-label={label}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        const element = rail.current;
+        if (!element) return;
+        const card = element.firstElementChild as HTMLElement | null;
+        const step = (card?.offsetWidth || element.clientWidth * 0.82) + 12;
+        element.scrollBy({
+          left: event.key === "ArrowLeft" ? -step : step,
+          behavior: "smooth",
+        });
+      }}
+    >
       {children}
     </div>
   );

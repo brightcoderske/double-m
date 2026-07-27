@@ -707,7 +707,7 @@ app.post("/api/v1/client/reviews", requireAuth, async (req, res, next) => {
       .object({
         placementId: z.coerce.number().int().positive().optional(),
         rating: z.coerce.number().int().min(1).max(5),
-        reviewText: z.string().min(20).max(3000),
+        reviewText: z.string().min(20).max(100),
       })
       .parse(req.body);
     await db().execute(
@@ -731,6 +731,137 @@ app.get("/api/v1/jobs", async (_req, res, next) => {
     next(e);
   }
 });
+app.get("/api/v1/public/candidates", async (_req, res, next) => {
+  try {
+    const [candidates] = await db().query(
+      `SELECT cp.user_id id,
+        CONCAT(SUBSTRING_INDEX(TRIM(cp.full_name),' ',1),' · DM',LPAD(cp.user_id,4,'0')) public_name,
+        cp.profession,cp.location,pref.best_role,pref.work_arrangement,priv.education_level,
+        CASE WHEN photo.id IS NULL THEN NULL ELSE CONCAT('/public/candidates/',cp.user_id,'/photo') END profile_image
+       FROM candidate_profiles cp
+       JOIN users u ON u.id=cp.user_id AND u.status='active'
+       JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified'
+       JOIN candidate_verification_checks availability_check ON availability_check.candidate_user_id=cp.user_id AND availability_check.check_code='availability' AND availability_check.status='verified'
+       LEFT JOIN candidate_preferences pref ON pref.candidate_user_id=cp.user_id
+       LEFT JOIN candidate_private_details priv ON priv.candidate_user_id=cp.user_id
+       LEFT JOIN candidate_documents photo ON photo.id=(SELECT cd.id FROM candidate_documents cd WHERE cd.candidate_user_id=cp.user_id AND cd.document_type='passport_photo' AND cd.status='verified' ORDER BY cd.created_at DESC LIMIT 1)
+       WHERE cp.availability_status IN ('available','available_from')
+       ORDER BY cp.updated_at DESC LIMIT 24`,
+    );
+    res.json({ candidates });
+  } catch (error) {
+    next(error);
+  }
+});
+app.get(
+  "/api/v1/public/candidates/:candidateId/photo",
+  async (req, res, next) => {
+    try {
+      const candidateId = z.coerce
+        .number()
+        .int()
+        .positive()
+        .parse(req.params.candidateId);
+      const [[photo]] = await db().execute(
+        `SELECT cd.storage_key,cd.mime_type
+       FROM candidate_documents cd
+       JOIN candidate_profiles cp ON cp.user_id=cd.candidate_user_id
+       JOIN users u ON u.id=cp.user_id AND u.status='active'
+       JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified'
+       JOIN candidate_verification_checks availability_check ON availability_check.candidate_user_id=cp.user_id AND availability_check.check_code='availability' AND availability_check.status='verified'
+       WHERE cd.candidate_user_id=? AND cd.document_type='passport_photo' AND cd.status='verified'
+         AND cp.availability_status IN ('available','available_from')
+       ORDER BY cd.created_at DESC LIMIT 1`,
+        [candidateId],
+      );
+      if (!photo)
+        return res
+          .status(404)
+          .json({ message: "Public profile image not found." });
+      res.setHeader("Content-Type", photo.mime_type);
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      createReadStream(
+        path.join(uploadRoot, path.basename(photo.storage_key)),
+      ).pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.get("/api/v1/public/reviews", async (_req, res, next) => {
+  try {
+    const [reviews] = await db().query(
+      `SELECT r.id,r.rating,LEFT(r.review_text,100) review_text,
+        COALESCE(SUBSTRING_INDEX(TRIM(ep.full_name),' ',1),SUBSTRING_INDEX(TRIM(cp.full_name),' ',1),'Double M client') reviewer_name
+       FROM reviews r
+       JOIN users u ON u.id=r.user_id AND u.status='active'
+       LEFT JOIN employer_profiles ep ON ep.user_id=r.user_id
+       LEFT JOIN candidate_profiles cp ON cp.user_id=r.user_id
+       WHERE r.status='published'
+       ORDER BY r.created_at DESC LIMIT 30`,
+    );
+    res.json({ reviews });
+  } catch (error) {
+    next(error);
+  }
+});
+app.get(
+  "/api/v1/admin/reviews",
+  requireAuth,
+  allow("administrator"),
+  async (_req, res, next) => {
+    try {
+      const [reviews] = await db().query(
+        `SELECT r.id,r.rating,r.review_text,r.status,r.created_at,u.email,
+          COALESCE(ep.full_name,cp.full_name,u.email) reviewer_name
+         FROM reviews r
+         JOIN users u ON u.id=r.user_id
+         LEFT JOIN employer_profiles ep ON ep.user_id=r.user_id
+         LEFT JOIN candidate_profiles cp ON cp.user_id=r.user_id
+         ORDER BY FIELD(r.status,'pending','published','rejected'),r.created_at DESC LIMIT 100`,
+      );
+      res.json({ reviews });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.put(
+  "/api/v1/admin/reviews/:reviewId",
+  requireAuth,
+  allow("administrator"),
+  async (req, res, next) => {
+    try {
+      const reviewId = z.coerce
+        .number()
+        .int()
+        .positive()
+        .parse(req.params.reviewId);
+      const value = z
+        .object({
+          status: z.enum(["pending", "published", "rejected"]),
+        })
+        .parse(req.body);
+      await db().execute("UPDATE reviews SET status=? WHERE id=?", [
+        value.status,
+        reviewId,
+      ]);
+      await db().execute(
+        "INSERT INTO staff_activity(staff_user_id,action_code,entity_type,entity_id,context) VALUES(?,'review.moderated','review',?,JSON_OBJECT('status',?))",
+        [req.user.id, String(reviewId), value.status],
+      );
+      res.json({
+        message:
+          value.status === "published"
+            ? "Review and star rating approved for publication."
+            : "Review status updated.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.post(
   "/api/v1/staff/jobs",
   requireAuth,
