@@ -18,7 +18,13 @@ export default function Assisted() {
         },
       ),
       b = await r.json();
-    setMessage(b.message);
+    setMessage(
+      r.ok
+        ? b.message
+        : b.issues?.map((issue: { message: string }) => issue.message).join(" ")
+          || b.message
+          || "The account could not be created.",
+    );
   }
   return (
     <main className="admin-controls">
@@ -50,12 +56,23 @@ export default function Assisted() {
             <input name="fullName" required />
           </label>
           <label>
-            Email
-            <input name="email" type="email" required />
+            Email (optional)
+            <input name="email" type="email" />
+            <small>
+              Leave blank when the client has no email. An agency login will be
+              generated.
+            </small>
           </label>
           <label>
             Phone
-            <input name="phone" required />
+            <input
+              name="phone"
+              inputMode="numeric"
+              pattern="0[0-9]{9}"
+              maxLength={10}
+              placeholder="0712345678"
+              required
+            />
           </label>
           <label>
             County or town
@@ -69,7 +86,17 @@ export default function Assisted() {
               </label>
               <label>
                 Year and date of birth
-                <input name="dateOfBirth" type="date" />
+                <input
+                  name="dateOfBirth"
+                  type="date"
+                  max={new Date(
+                    new Date().setFullYear(new Date().getFullYear() - 18),
+                  )
+                    .toISOString()
+                    .slice(0, 10)}
+                  required
+                />
+                <small>Candidate must be at least 18 years old.</small>
               </label>
               <label>
                 Education level

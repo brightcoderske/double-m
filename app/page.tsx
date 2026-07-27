@@ -321,9 +321,14 @@ export default function Home() {
               are ready for a suitable placement.
             </p>
           </div>
-          <Link className="arrow-link" href="/hire">
-            Request a shortlist <ArrowRight size={18} />
-          </Link>
+          <div className="section-actions">
+            <Link className="arrow-link" href="/talent">
+              View and share available workers <ArrowRight size={18} />
+            </Link>
+            <Link className="arrow-link" href="/hire">
+              Request a shortlist <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
         <AvailableCandidateRail />
       </section>

@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       "/about/founder",
       "/services",
       "/jobs",
+      "/talent",
       "/hire",
       "/register",
       "/blog",

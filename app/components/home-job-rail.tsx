@@ -63,7 +63,6 @@ export function HomeJobRail() {
     >
       {jobs.slice(0, 8).map((job) => (
         <article className="job-preview-card" key={job.id}>
-          <span>{job.reference_code}</span>
           <h3>{job.title}</h3>
           <div>
             <small>
@@ -74,7 +73,7 @@ export function HomeJobRail() {
             </small>
           </div>
           <p>{job.description}</p>
-          <Link href="/jobs">
+          <Link href={`/jobs/${job.id}`}>
             View and apply <ArrowRight />
           </Link>
         </article>

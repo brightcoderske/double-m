@@ -24,7 +24,11 @@ export function EmployerAccountForm() {
       setStatus(
         r.ok
           ? "Account created. Check your email and verify it before signing in."
-          : b.issues?.[0]?.message || b.message || "Registration failed.",
+          : b.issues
+                ?.map((issue: { message: string }) => issue.message)
+                .join(" ") ||
+              b.message ||
+              "Registration failed.",
       );
     } catch {
       setStatus("We could not connect securely. Please try again.");

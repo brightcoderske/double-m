@@ -200,6 +200,21 @@ const strongPassword = z
   .regex(/[a-z]/, "Password must include a lowercase letter.")
   .regex(/[A-Z]/, "Password must include a capital letter.")
   .regex(/[0-9]/, "Password must include a number.");
+const adultBirthDate = z
+  .string()
+  .date("Enter a valid date of birth.")
+  .refine((value) => {
+    const birthDate = new Date(`${value}T00:00:00Z`);
+    const today = new Date();
+    const adultDate = new Date(
+      Date.UTC(
+        today.getUTCFullYear() - 18,
+        today.getUTCMonth(),
+        today.getUTCDate(),
+      ),
+    );
+    return birthDate <= adultDate;
+  }, "Candidates must be at least 18 years old.");
 const registration = z.object({
   fullName: z.string().trim().min(2).max(150),
   phone: z
@@ -214,8 +229,21 @@ const registration = z.object({
   password: strongPassword,
   accountType: z.enum(["candidate", "employer"]).default("candidate"),
   profession: z.string().trim().max(120).optional(),
+  dateOfBirth: z.string().optional(),
   location: z.string().trim().min(2).max(160),
   privacyConsent: z.literal("true"),
+}).superRefine((value, context) => {
+  if (value.accountType === "candidate") {
+    const result = adultBirthDate.safeParse(value.dateOfBirth);
+    if (!result.success)
+      context.addIssue({
+        code: "custom",
+        path: ["dateOfBirth"],
+        message:
+          result.error.issues[0]?.message ||
+          "Candidates must provide a valid date of birth.",
+      });
+  }
 });
 app.post("/api/v1/auth/register", authLimiter, async (req, res, next) => {
   try {
@@ -252,6 +280,10 @@ app.post("/api/v1/auth/register", authLimiter, async (req, res, next) => {
         await conn.execute(
           "INSERT INTO job_alerts(user_id,profession,location) VALUES(?,?,?)",
           [r.insertId, v.profession || null, v.location],
+        );
+        await conn.execute(
+          "INSERT INTO candidate_private_details(candidate_user_id,date_of_birth) VALUES(?,?)",
+          [r.insertId, v.dateOfBirth],
         );
       } else
         await conn.execute(
@@ -308,12 +340,12 @@ app.post("/api/v1/auth/verify-email", authLimiter, async (req, res, next) => {
     try {
       await connection.beginTransaction();
       [[verifiedUser]] = await connection.execute(
-        `SELECT u.id,u.email,u.role,COALESCE(cp.full_name,ep.full_name,u.email) full_name
+        `SELECT u.id,u.email,u.role,evt.used_at,COALESCE(cp.full_name,ep.full_name,u.email) full_name
          FROM email_verification_tokens evt
          JOIN users u ON u.id=evt.user_id
          LEFT JOIN candidate_profiles cp ON cp.user_id=u.id
          LEFT JOIN employer_profiles ep ON ep.user_id=u.id
-         WHERE evt.token_hash=? AND evt.used_at IS NULL AND evt.expires_at>UTC_TIMESTAMP()
+         WHERE evt.token_hash=? AND evt.expires_at>UTC_TIMESTAMP()
          FOR UPDATE`,
         [tokenHash],
       );
@@ -324,11 +356,11 @@ app.post("/api/v1/auth/verify-email", authLimiter, async (req, res, next) => {
         });
       }
       await connection.execute(
-        "UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",
+        "UPDATE users SET email_verified_at=COALESCE(email_verified_at,UTC_TIMESTAMP()) WHERE id=?",
         [verifiedUser.id],
       );
       await connection.execute(
-        "UPDATE email_verification_tokens SET used_at=UTC_TIMESTAMP() WHERE token_hash=?",
+        "UPDATE email_verification_tokens SET used_at=COALESCE(used_at,UTC_TIMESTAMP()) WHERE token_hash=?",
         [tokenHash],
       );
       await connection.commit();
@@ -338,7 +370,7 @@ app.post("/api/v1/auth/verify-email", authLimiter, async (req, res, next) => {
     } finally {
       connection.release();
     }
-    if (verifiedUser.role === "candidate") {
+    if (!verifiedUser.used_at && verifiedUser.role === "candidate") {
       const [recipients] = await db().query(
         `SELECT email FROM users WHERE role='administrator' AND status='active'
          UNION SELECT COALESCE((SELECT setting_value FROM site_settings WHERE setting_key='contact_email' LIMIT 1),'support@doublemagency.co.ke') email`,
@@ -354,12 +386,13 @@ app.post("/api/v1/auth/verify-email", authLimiter, async (req, res, next) => {
         );
       }
     }
-    void queueEmail(
-      verifiedUser.email,
-      verifiedUser.role === "candidate"
-        ? templates.candidateWelcome(verifiedUser.full_name)
-        : templates.employerWelcome(verifiedUser.full_name),
-    );
+    if (!verifiedUser.used_at)
+      void queueEmail(
+        verifiedUser.email,
+        verifiedUser.role === "candidate"
+          ? templates.candidateWelcome(verifiedUser.full_name)
+          : templates.employerWelcome(verifiedUser.full_name),
+      );
     res.json({ message: "Email verified. You can now sign in." });
   } catch (error) {
     next(error);
@@ -889,11 +922,32 @@ app.get("/api/v1/jobs", async (_req, res, next) => {
     next(e);
   }
 });
+app.get("/api/v1/jobs/:jobId", async (req, res, next) => {
+  try {
+    const id = z.coerce.number().int().positive().parse(req.params.jobId);
+    const [[job]] = await db().execute(
+      `SELECT j.id,j.title,j.location,j.employment_type,j.description,
+        j.application_deadline,j.created_at,d.duties,d.expectations,
+        d.experience_required,d.salary_min,d.salary_max,d.schedule,
+        d.work_arrangement,d.accommodation,d.benefits
+       FROM jobs j
+       LEFT JOIN job_details d ON d.job_id=j.id
+       WHERE j.id=? AND j.status='published'
+         AND (j.application_deadline IS NULL OR j.application_deadline>=UTC_TIMESTAMP())`,
+      [id],
+    );
+    if (!job)
+      return res.status(404).json({ message: "This job is not available." });
+    res.json({ job });
+  } catch (error) {
+    next(error);
+  }
+});
 app.get("/api/v1/public/candidates", async (_req, res, next) => {
   try {
     const [candidates] = await db().query(
       `SELECT cp.user_id id,
-        CONCAT(SUBSTRING_INDEX(TRIM(cp.full_name),' ',1),' · DM',LPAD(cp.user_id,4,'0')) public_name,
+        SUBSTRING_INDEX(TRIM(cp.full_name),' ',1) public_name,
         cp.profession,cp.location,pref.best_role,pref.other_roles,pref.work_arrangement,
         pref.available_from,priv.education_level,priv.county,priv.languages,
         priv.experience_summary,priv.skills_summary,
@@ -908,6 +962,7 @@ app.get("/api/v1/public/candidates", async (_req, res, next) => {
        WHERE cp.availability_status IN ('available','available_from')
          AND cp.public_profile_consent=TRUE
          AND cp.agency_approval_status='approved'
+         AND priv.date_of_birth<=DATE_SUB(CURDATE(),INTERVAL 18 YEAR)
        ORDER BY cp.updated_at DESC LIMIT 24`,
     );
     res.json({ candidates });
@@ -928,11 +983,13 @@ app.get(
         `SELECT cd.storage_key,cd.mime_type
        FROM candidate_documents cd
        JOIN candidate_profiles cp ON cp.user_id=cd.candidate_user_id
+       JOIN candidate_private_details priv ON priv.candidate_user_id=cp.user_id
        JOIN users u ON u.id=cp.user_id AND u.status='active'
        WHERE cd.candidate_user_id=? AND cd.document_type='passport_photo' AND cd.status='verified'
          AND cp.availability_status IN ('available','available_from')
          AND cp.public_profile_consent=TRUE
          AND cp.agency_approval_status='approved'
+         AND priv.date_of_birth<=DATE_SUB(CURDATE(),INTERVAL 18 YEAR)
        ORDER BY cd.created_at DESC LIMIT 1`,
         [candidateId],
       );
@@ -2293,6 +2350,14 @@ app.put(
       );
       if (!account)
         return res.status(404).json({ message: "Account not found." });
+      if (
+        account.role === "candidate" &&
+        !adultBirthDate.safeParse(value.dateOfBirth).success
+      )
+        return res.status(400).json({
+          message:
+            "Candidates must have a valid date of birth and be at least 18 years old.",
+        });
       const connection = await db().getConnection();
       try {
         await connection.beginTransaction();
@@ -2703,11 +2768,20 @@ app.post(
       const v = z
         .object({
           fullName: z.string().min(2).max(150),
-          email: z
+          email: z.preprocess(
+            (value) => (String(value || "").trim() ? value : undefined),
+            z
+              .string()
+              .email("Enter a valid email address or leave it blank.")
+              .transform((x) => x.toLowerCase())
+              .optional(),
+          ),
+          phone: z
             .string()
-            .email()
-            .transform((x) => x.toLowerCase()),
-          phone: z.string().min(7).max(30),
+            .regex(
+              /^0\d{9}$/,
+              "Use a 10-digit phone number such as 0712345678.",
+            ),
           role: z.enum(["candidate", "employer"]),
           location: z.string().min(2).max(160),
           profession: z.string().max(120).optional(),
@@ -2719,7 +2793,30 @@ app.post(
           skillsSummary: z.string().max(500).optional(),
           temporaryPassword: z.string().min(10).max(128),
         })
+        .superRefine((value, context) => {
+          if (value.role === "candidate") {
+            const result = adultBirthDate.safeParse(value.dateOfBirth);
+            if (!result.success)
+              context.addIssue({
+                code: "custom",
+                path: ["dateOfBirth"],
+                message:
+                  result.error.issues[0]?.message ||
+                  "Candidates must be at least 18 years old.",
+              });
+          }
+        })
         .parse(req.body);
+      const suppliedEmail = v.email;
+      const generatedEmail = `${v.fullName
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[^a-z0-9]+/g, ".")
+        .replace(/^\.+|\.+$/g, "")
+        .slice(0, 60) || "client"}.${crypto
+        .randomBytes(3)
+        .toString("hex")}@doublemagency.co.ke`;
+      const accountEmail = suppliedEmail || generatedEmail;
       const passwordHash = await argon2.hash(v.temporaryPassword, {
         type: argon2.argon2id,
       });
@@ -2728,7 +2825,7 @@ app.post(
         await conn.beginTransaction();
         const [created] = await conn.execute(
           "INSERT INTO users(email,password_hash,role,status,email_verified_at,force_password_change) VALUES(?,?,?,'active',UTC_TIMESTAMP(),TRUE)",
-          [v.email, passwordHash, v.role],
+          [accountEmail, passwordHash, v.role],
         );
         if (v.role === "candidate") {
           await conn.execute(
@@ -2770,16 +2867,22 @@ app.post(
       } finally {
         conn.release();
       }
-      void queueEmail(
-        v.email,
-        v.role === "candidate"
-          ? templates.candidateWelcome(v.fullName)
-          : templates.employerWelcome(v.fullName),
-      );
+      if (suppliedEmail)
+        void queueEmail(
+          suppliedEmail,
+          v.role === "candidate"
+            ? templates.candidateWelcome(v.fullName)
+            : templates.employerWelcome(v.fullName),
+        );
       res.status(201).json({
-        message: `${v.role === "candidate" ? "Candidate" : "Employer"} account created with a required first-login password change.`,
+        message: `${v.role === "candidate" ? "Candidate" : "Employer"} account created${suppliedEmail ? "" : ` with agency login ${accountEmail}`}. A password change is required at first sign-in.`,
       });
     } catch (e) {
+      if (e.code === "ER_DUP_ENTRY")
+        return res.status(409).json({
+          message:
+            "That email address is already linked to an account. Use a different email or open the existing account.",
+        });
       next(e);
     }
   },
@@ -3040,10 +3143,22 @@ app.put(
         note: z.string().max(500).optional(),
       }).parse(req.body);
       const [[candidate]] = await db().execute(
-        "SELECT cp.full_name,u.email FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id WHERE cp.user_id=?",
+        "SELECT cp.full_name,u.email,pd.date_of_birth FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id LEFT JOIN candidate_private_details pd ON pd.candidate_user_id=cp.user_id WHERE cp.user_id=?",
         [candidateId],
       );
       if (!candidate) return res.status(404).json({ message: "Candidate not found." });
+      if (
+        value.status === "approved" &&
+        !adultBirthDate.safeParse(
+          candidate.date_of_birth
+            ? new Date(candidate.date_of_birth).toISOString().slice(0, 10)
+            : undefined,
+        ).success
+      )
+        return res.status(400).json({
+          message:
+            "Add a valid date of birth confirming the candidate is at least 18 before approval.",
+        });
       await db().execute(
         "UPDATE candidate_profiles SET agency_approval_status=?,agency_approval_note=?,agency_reviewed_by=?,agency_reviewed_at=UTC_TIMESTAMP() WHERE user_id=?",
         [value.status, value.note || null, req.user.id, candidateId],

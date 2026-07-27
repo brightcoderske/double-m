@@ -8,6 +8,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
+import { ShareButton } from "./share-button";
 type Job = {
   id: number;
   reference_code: string;
@@ -74,7 +75,6 @@ export function JobBrowser() {
         <section className="job-grid">
           {shown.map((j) => (
             <article key={j.id}>
-              <span>{j.reference_code}</span>
               <h2>{j.title}</h2>
               <div>
                 <small>
@@ -93,6 +93,15 @@ export function JobBrowser() {
               </div>
               <p>{j.description}</p>
               <div>
+                <Link className="table-action" href={`/jobs/${j.id}`}>
+                  View details
+                </Link>
+                <ShareButton
+                  title={j.title}
+                  url={`/jobs/${j.id}`}
+                  label="Share job"
+                  text={`${j.title} opportunity in ${j.location} through Double M Agency.`}
+                />
                 <button onClick={() => act(j.id, "save")}>
                   <Bookmark /> I’m interested
                 </button>

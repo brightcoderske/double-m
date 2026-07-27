@@ -283,16 +283,17 @@ function EmployerView({ data }: { data: any }) {
         <Link href="/dashboard/my-contracts">My contracts</Link>
       </div>
       <div className="metric-grid">
-        <Metric title="Ongoing requests" value={data.requests?.length || 0} />
+        <Metric title="Ongoing requests" value={data.requests?.length || 0} href="/dashboard/requests" />
         <Metric
           title="Active placements"
           value={
             data.placements?.filter((x: any) => x.status === "active").length ||
             0
           }
+          href="/dashboard/client"
         />
-        <Metric title="Payment records" value={data.payments?.length || 0} />
-        <Metric title="Support cases" value={data.replacements?.length || 0} />
+        <Metric title="Payment records" value={data.payments?.length || 0} href="/dashboard" />
+        <Metric title="Support cases" value={data.replacements?.length || 0} href="/dashboard/client" />
       </div>
       {data.shortlist?.length > 0 && (
         <section className="dash-panel">
@@ -426,12 +427,14 @@ function CandidateView({ data }: { data: any }) {
         <Metric
           title="Availability"
           value={data.profile?.availability_status || "Not set"}
+          href="/dashboard/preferences"
         />
         <Metric
           title="Profession"
           value={data.profile?.profession || "Not set"}
+          href="/dashboard/preferences"
         />
-        <Metric title="Applications" value={data.applications?.length || 0} />
+        <Metric title="Applications" value={data.applications?.length || 0} href="/dashboard/applications" />
         <Metric
           title="Interviews"
           value={
@@ -439,6 +442,7 @@ function CandidateView({ data }: { data: any }) {
               (item: any) => item.status === "interview",
             ).length || 0
           }
+          href="/dashboard/applications"
         />
       </div>
       <section className="verification-card">
@@ -672,10 +676,10 @@ function StaffView({ data }: { data: any }) {
   return (
     <>
       <div className="metric-grid">
-        <Metric title="Candidates" value={m.candidates || 0} />
-        <Metric title="Open requests" value={m.openRequests || 0} />
-        <Metric title="Published jobs" value={m.publishedJobs || 0} />
-        <Metric title="Emails queued" value={m.pendingEmails || 0} />
+        <Metric title="Candidates" value={m.candidates || 0} href="/dashboard/candidates" />
+        <Metric title="Open requests" value={m.openRequests || 0} href="/dashboard/jobs" />
+        <Metric title="Published jobs" value={m.publishedJobs || 0} href="/dashboard/jobs" />
+        <Metric title="Emails queued" value={m.pendingEmails || 0} href="/dashboard/activity" />
         <Link className="metric metric-link" href="/dashboard/candidates/pending">
           <span>Candidate approvals</span>
           <strong>{m.pendingApprovals || 0}</strong>
@@ -776,13 +780,21 @@ function DocumentUpload({
     </form>
   );
 }
-function Metric({ title, value }: { title: string; value: string | number }) {
+function Metric({
+  title,
+  value,
+  href,
+}: {
+  title: string;
+  value: string | number;
+  href: string;
+}) {
   return (
-    <article className="metric">
+    <Link className="metric metric-link" href={href}>
       <span>{title}</span>
       <strong>{value}</strong>
-      <small>Live system data</small>
-    </article>
+      <small>Open workspace</small>
+    </Link>
   );
 }
 function PaymentTable({ rows = [] }: { rows?: any[] }) {

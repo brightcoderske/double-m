@@ -25,7 +25,7 @@ export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
       const body = await response.json();
       if (!response.ok)
         throw new Error(
-          body.issues?.[0]?.message ||
+          body.issues?.map((issue: { message: string }) => issue.message).join(" ") ||
             body.message ||
             "Registration could not be completed.",
         );
@@ -102,6 +102,20 @@ export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
               <input name="location" required />
             </label>
           </div>
+          <label>
+            Date of birth
+            <input
+              name="dateOfBirth"
+              type="date"
+              max={new Date(
+                new Date().setFullYear(new Date().getFullYear() - 18),
+              )
+                .toISOString()
+                .slice(0, 10)}
+              required
+            />
+            <small>Job seekers must be 18 years or older.</small>
+          </label>
           <label className="consent">
             <input
               type="checkbox"
