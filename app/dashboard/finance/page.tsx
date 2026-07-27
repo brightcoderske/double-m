@@ -25,7 +25,8 @@ export default function Finance() {
   }, []);
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget),
+    const formElement = e.currentTarget,
+      form = new FormData(formElement),
       price = data.prices.find(
         (x: any) => String(x.id) === form.get("servicePriceId"),
       );
@@ -50,7 +51,7 @@ export default function Finance() {
       result = await r.json();
     setMessage(result.message);
     if (r.ok) {
-      e.currentTarget.reset();
+      formElement.reset();
       void load();
     }
   }

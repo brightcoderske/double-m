@@ -706,6 +706,11 @@ function DocumentUpload({
     e.preventDefault();
     setMessage("Uploading privately…");
     const form = new FormData(e.currentTarget);
+    const file = form.get("document");
+    if (file instanceof File && file.size > 2 * 1024 * 1024) {
+      setMessage("Choose a file no larger than 2 MB.");
+      return;
+    }
     const r = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/candidate/documents`,
       { method: "POST", credentials: "include", body: form },

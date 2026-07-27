@@ -25,7 +25,8 @@ export default function Contracts() {
   }, []);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget),
+    const formElement = e.currentTarget,
+      f = new FormData(formElement),
       jobId = f.get("jobId");
     const r = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/staff/contracts`,
@@ -48,13 +49,14 @@ export default function Contracts() {
     );
     setMessage((await r.json()).message);
     if (r.ok) {
-      e.currentTarget.reset();
+      formElement.reset();
       void load();
     }
   }
   async function replace(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
+    const formElement = e.currentTarget;
+    const form = new FormData(formElement);
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/staff/contracts/${form.get("contractId")}/replacement`,
       {
@@ -70,7 +72,7 @@ export default function Contracts() {
     const body = await response.json();
     setMessage(body.message);
     if (response.ok) {
-      e.currentTarget.reset();
+      formElement.reset();
       void load();
     }
   }

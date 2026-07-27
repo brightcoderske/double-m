@@ -125,7 +125,7 @@ const privateUpload = multer({
         `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`,
       ),
   }),
-  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
   fileFilter: (_req, file, done) =>
     done(
       null,
@@ -3034,7 +3034,7 @@ app.post(
       if (!req.file)
         return res
           .status(400)
-          .json({ message: "Choose a PDF, JPG or PNG file up to 8 MB." });
+          .json({ message: "Choose a PDF, JPG or PNG file up to 2 MB." });
       const { documentType } = z
         .object({
           documentType: z.enum([
@@ -3131,7 +3131,7 @@ app.post(
       if (!req.file)
         return res
           .status(400)
-          .json({ message: "Choose a PDF, JPG or PNG file up to 8 MB." });
+          .json({ message: "Choose a PDF, JPG or PNG file up to 2 MB." });
       const candidateId = z.coerce
         .number()
         .int()
@@ -3640,7 +3640,7 @@ app.use((err, _req, res, _next) => {
     return res.status(err.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
       message:
         err.code === "LIMIT_FILE_SIZE"
-          ? "The uploaded file is larger than the permitted limit."
+          ? "The uploaded file is larger than 2 MB."
           : "The uploaded file was not accepted.",
     });
   if (err instanceof z.ZodError)

@@ -46,15 +46,22 @@ export default function AccountEditor() {
 
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const payload = new FormData(form);
+    const file = payload.get("document");
+    if (file instanceof File && file.size > 2 * 1024 * 1024) {
+      setMessage("Choose a file no larger than 2 MB.");
+      return;
+    }
     const response = await fetch(`${api}/staff/candidates/${id}/documents`, {
       method: "POST",
       credentials: "include",
-      body: new FormData(event.currentTarget),
+      body: payload,
     });
     const result = await response.json();
     setMessage(result.message);
     if (response.ok) {
-      event.currentTarget.reset();
+      form.reset();
       await load();
     }
   }
