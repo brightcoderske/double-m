@@ -72,6 +72,16 @@ export default function Finance() {
     setMessage(result.message);
     if (r.ok) void load();
   }
+  async function removeBand(id: number) {
+    if (!window.confirm("Remove this payment band?")) return;
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/admin/fee-bands/${id}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    const result = await response.json();
+    setMessage(result.message);
+    if (response.ok) void load();
+  }
   return (
     <main className="admin-controls">
       <header>
@@ -290,9 +300,14 @@ export default function Finance() {
                   <td>KES {Number(band.salary_max).toLocaleString()}</td>
                   <td>KES {Number(band.fee_amount).toLocaleString()}</td>
                   <td>
-                    <Link className="table-action" href="/dashboard/admin">
-                      Edit
-                    </Link>
+                    <div className="table-button-group">
+                      <Link className="table-action" href="/dashboard/admin">
+                        Edit
+                      </Link>
+                      <button type="button" onClick={() => removeBand(band.id)}>
+                        Remove
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

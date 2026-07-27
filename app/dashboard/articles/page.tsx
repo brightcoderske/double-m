@@ -121,8 +121,20 @@ export default function ArticleWorkspace() {
               {articles.map((article) => (
                 <tr key={article.id}>
                   <td>
-                    <b>{article.title}</b>
-                    <small>{article.excerpt}</small>
+                    <div className="article-register-title">
+                      {article.cover_image && (
+                        // Uploaded article media is served by the protected backend.
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`${api}/media/articles/${article.cover_image}`}
+                          alt=""
+                        />
+                      )}
+                      <span>
+                        <b>{article.title}</b>
+                        <small>{article.excerpt}</small>
+                      </span>
+                    </div>
                   </td>
                   <td>{article.author_email}</td>
                   <td>

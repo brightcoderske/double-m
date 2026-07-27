@@ -465,7 +465,7 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
       data = { requests, payments, placements, replacements, shortlist };
     } else if (u.role === "candidate") {
       const [profiles] = await db().execute(
-        "SELECT full_name,profession,location,availability_status,profile_completion FROM candidate_profiles WHERE user_id=?",
+        "SELECT full_name,profession,location,availability_status,profile_completion,public_profile_consent FROM candidate_profiles WHERE user_id=?",
         [u.id],
       );
       const [jobs] = await db().execute(
@@ -780,6 +780,7 @@ app.get("/api/v1/public/candidates", async (_req, res, next) => {
        LEFT JOIN candidate_private_details priv ON priv.candidate_user_id=cp.user_id
        LEFT JOIN candidate_documents photo ON photo.id=(SELECT cd.id FROM candidate_documents cd WHERE cd.candidate_user_id=cp.user_id AND cd.document_type='passport_photo' AND cd.status='verified' ORDER BY cd.created_at DESC LIMIT 1)
        WHERE cp.availability_status IN ('available','available_from')
+         AND cp.public_profile_consent=TRUE
        ORDER BY cp.updated_at DESC LIMIT 24`,
     );
     res.json({ candidates });
@@ -803,6 +804,7 @@ app.get(
        JOIN users u ON u.id=cp.user_id AND u.status='active'
        WHERE cd.candidate_user_id=? AND cd.document_type='passport_photo' AND cd.status='verified'
          AND cp.availability_status IN ('available','available_from')
+         AND cp.public_profile_consent=TRUE
        ORDER BY cd.created_at DESC LIMIT 1`,
         [candidateId],
       );
@@ -889,6 +891,24 @@ app.put(
             ? "Review and star rating approved for publication."
             : "Review status updated.",
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.delete(
+  "/api/v1/admin/reviews/:reviewId",
+  requireAuth,
+  allow("administrator"),
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.reviewId);
+      const [result] = await db().execute("DELETE FROM reviews WHERE id=?", [
+        id,
+      ]);
+      if (!result.affectedRows)
+        return res.status(404).json({ message: "Review not found." });
+      res.json({ message: "Review deleted." });
     } catch (error) {
       next(error);
     }
@@ -1111,6 +1131,30 @@ app.put(
     }
   },
 );
+app.delete(
+  "/api/v1/staff/jobs/:jobId",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.jobId);
+      const [[job]] = await db().execute(
+        "SELECT id,staffing_request_id FROM jobs WHERE id=?",
+        [id],
+      );
+      if (!job) return res.status(404).json({ message: "Job not found." });
+      await db().execute("DELETE FROM jobs WHERE id=?", [id]);
+      if (job.staffing_request_id)
+        await db().execute(
+          "UPDATE staffing_requests SET status='confirmed' WHERE id=? AND status NOT IN ('placed','closed','cancelled')",
+          [job.staffing_request_id],
+        );
+      res.json({ message: "Job removed from the register." });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.get(
   "/api/v1/staff/job-options",
   requireAuth,
@@ -1131,6 +1175,7 @@ app.get(
            LEFT JOIN users u ON u.email=sr.email AND u.role='employer'
            LEFT JOIN jobs j ON j.staffing_request_id=sr.id
            LEFT JOIN applications a ON a.job_id=j.id
+           WHERE j.id IS NULL
            GROUP BY sr.id,j.id
            ORDER BY sr.created_at DESC LIMIT 100`,
         ),
@@ -1952,7 +1997,7 @@ app.get(
   async (_req, res, next) => {
     try {
       const [users] = await db().query(
-        "SELECT id,email,role,status,created_at FROM users ORDER BY created_at DESC LIMIT 200",
+        "SELECT u.id,u.email,u.role,u.status,u.created_at,COALESCE(cp.full_name,ep.full_name,u.email) full_name FROM users u LEFT JOIN candidate_profiles cp ON cp.user_id=u.id LEFT JOIN employer_profiles ep ON ep.user_id=u.id ORDER BY u.created_at DESC LIMIT 500",
       );
       res.json({ users });
     } catch (e) {
@@ -1987,6 +2032,182 @@ app.put(
       });
     } catch (e) {
       next(e);
+    }
+  },
+);
+app.delete(
+  "/api/v1/admin/users/:id",
+  requireAuth,
+  allow("administrator"),
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      if (id === req.user.id)
+        return res
+          .status(400)
+          .json({ message: "You cannot delete your own account." });
+      const [result] = await db().execute(
+        "UPDATE users u LEFT JOIN candidate_profiles cp ON cp.user_id=u.id SET u.status='deleted',u.google_subject=NULL,cp.availability_status='unavailable',cp.public_profile_consent=FALSE,cp.public_consent_at=NULL WHERE u.id=?",
+        [id],
+      );
+      if (!result.affectedRows)
+        return res.status(404).json({ message: "Account not found." });
+      await db().execute(
+        "INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id) VALUES(?,'user.deleted','user',?)",
+        [req.user.id, String(id)],
+      );
+      res.json({ message: "Account removed. Legal and payment records remain intact." });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.get(
+  "/api/v1/admin/users/:id/profile",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const [[account]] = await db().execute(
+        `SELECT u.id,u.email,u.role,u.status,
+          COALESCE(cp.full_name,ep.full_name,u.email) full_name,
+          COALESCE(cp.phone,ep.phone,'') phone,
+          cp.profession,cp.location,cp.availability_status,cp.public_profile_consent,
+          pd.date_of_birth,pd.education_level,pd.county,pd.languages,
+          pd.experience_summary,pd.skills_summary,
+          pref.best_role,pref.other_roles,pref.preferred_location,
+          pref.work_arrangement,pref.employment_type,pref.available_from
+         FROM users u
+         LEFT JOIN candidate_profiles cp ON cp.user_id=u.id
+         LEFT JOIN employer_profiles ep ON ep.user_id=u.id
+         LEFT JOIN candidate_private_details pd ON pd.candidate_user_id=u.id
+         LEFT JOIN candidate_preferences pref ON pref.candidate_user_id=u.id
+         WHERE u.id=?`,
+        [id],
+      );
+      if (!account)
+        return res.status(404).json({ message: "Account not found." });
+      const [documents] =
+        account.role === "candidate"
+          ? await db().execute(
+              "SELECT id,document_type,original_name,status,created_at FROM candidate_documents WHERE candidate_user_id=? ORDER BY created_at DESC",
+              [id],
+            )
+          : [[]];
+      res.json({ account, documents });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.put(
+  "/api/v1/admin/users/:id/profile",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const value = z
+        .object({
+          email: z.string().email(),
+          fullName: z.string().min(2).max(150),
+          phone: z.string().max(30).default(""),
+          profession: z.string().max(120).optional(),
+          location: z.string().max(160).optional(),
+          availabilityStatus: z
+            .enum(["available", "available_from", "placed", "unavailable"])
+            .optional(),
+          dateOfBirth: z.string().optional(),
+          educationLevel: z.string().max(120).optional(),
+          county: z.string().max(100).optional(),
+          languages: z.string().max(250).optional(),
+          experienceSummary: z.string().max(250).optional(),
+          skillsSummary: z.string().max(500).optional(),
+          bestRole: z.string().max(120).optional(),
+          otherRoles: z.string().max(500).optional(),
+          preferredLocation: z.string().max(160).optional(),
+          workArrangement: z
+            .enum(["live_in", "live_out", "either"])
+            .optional(),
+          employmentType: z
+            .enum(["full_time", "part_time", "contract", "any"])
+            .optional(),
+          availableFrom: z.string().optional(),
+          publicProfileConsent: z.boolean().default(false),
+        })
+        .parse(req.body);
+      const [[account]] = await db().execute(
+        "SELECT role FROM users WHERE id=?",
+        [id],
+      );
+      if (!account)
+        return res.status(404).json({ message: "Account not found." });
+      const connection = await db().getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.execute("UPDATE users SET email=? WHERE id=?", [
+          value.email.toLowerCase(),
+          id,
+        ]);
+        if (account.role === "candidate") {
+          await connection.execute(
+            "UPDATE candidate_profiles SET full_name=?,phone=?,profession=?,location=?,availability_status=?,public_profile_consent=?,public_consent_at=IF(?=TRUE,COALESCE(public_consent_at,UTC_TIMESTAMP()),NULL) WHERE user_id=?",
+            [
+              value.fullName,
+              value.phone,
+              value.profession || "",
+              value.location || "",
+              value.availabilityStatus || "available",
+              value.publicProfileConsent,
+              value.publicProfileConsent,
+              id,
+            ],
+          );
+          await connection.execute(
+            "INSERT INTO candidate_private_details(candidate_user_id,date_of_birth,education_level,county,languages,experience_summary,skills_summary) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE date_of_birth=VALUES(date_of_birth),education_level=VALUES(education_level),county=VALUES(county),languages=VALUES(languages),experience_summary=VALUES(experience_summary),skills_summary=VALUES(skills_summary)",
+            [
+              id,
+              value.dateOfBirth || null,
+              value.educationLevel || null,
+              value.county || null,
+              value.languages || null,
+              value.experienceSummary || null,
+              value.skillsSummary || null,
+            ],
+          );
+          await connection.execute(
+            "INSERT INTO candidate_preferences(candidate_user_id,best_role,other_roles,preferred_location,work_arrangement,employment_type,available_from) VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE best_role=VALUES(best_role),other_roles=VALUES(other_roles),preferred_location=VALUES(preferred_location),work_arrangement=VALUES(work_arrangement),employment_type=VALUES(employment_type),available_from=VALUES(available_from)",
+            [
+              id,
+              value.bestRole || null,
+              value.otherRoles || null,
+              value.preferredLocation || null,
+              value.workArrangement || "either",
+              value.employmentType || "any",
+              value.availableFrom || null,
+            ],
+          );
+        } else if (account.role === "employer") {
+          await connection.execute(
+            "UPDATE employer_profiles SET full_name=?,phone=? WHERE user_id=?",
+            [value.fullName, value.phone, id],
+          );
+        }
+        await connection.execute(
+          "INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id) VALUES(?,'user.profile.update','user',?)",
+          [req.user.id, String(id)],
+        );
+        await connection.commit();
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+      res.json({ message: "Account details updated." });
+    } catch (error) {
+      next(error);
     }
   },
 );
@@ -2056,6 +2277,25 @@ app.put(
     }
   },
 );
+app.delete(
+  "/api/v1/admin/fee-bands/:id",
+  requireAuth,
+  allow("administrator"),
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const [result] = await db().execute(
+        "UPDATE fee_bands SET is_active=FALSE,updated_by=? WHERE id=?",
+        [req.user.id, id],
+      );
+      if (!result.affectedRows)
+        return res.status(404).json({ message: "Payment band not found." });
+      res.json({ message: "Payment band removed." });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.get(
   "/api/v1/staff/finance",
   requireAuth,
@@ -2078,7 +2318,7 @@ app.get(
         "SELECT ec.id,ec.contract_number,ec.employer_user_id,ec.candidate_user_id,ec.role_title,ec.salary_amount,ec.agency_fee_amount,ec.candidate_fee_amount,ue.email employer_email,uc.email candidate_email FROM employment_contracts ec JOIN users ue ON ue.id=ec.employer_user_id JOIN users uc ON uc.id=ec.candidate_user_id WHERE ec.status<>'cancelled' ORDER BY ec.created_at DESC LIMIT 100",
       );
       const [feeBands] = await db().query(
-        "SELECT payer_role,fee_name,salary_min,salary_max,fee_amount FROM fee_bands WHERE is_active=TRUE ORDER BY payer_role,salary_min",
+        "SELECT id,payer_role,fee_name,salary_min,salary_max,fee_amount FROM fee_bands WHERE is_active=TRUE ORDER BY payer_role,salary_min",
       );
       res.json({ transactions, prices, methods, payers, contracts, feeBands });
     } catch (e) {
@@ -2421,7 +2661,17 @@ app.get(
       if (!requests[0])
         return res.status(404).json({ message: "Staffing request not found." });
       const [candidates] = await db().query(
-        "SELECT cp.user_id,cp.full_name,cp.profession,cp.location,cp.availability_status FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id AND u.status='active' JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified' JOIN candidate_verification_checks phone_check ON phone_check.candidate_user_id=cp.user_id AND phone_check.check_code='phone_call' AND phone_check.status='verified' WHERE cp.availability_status='available' LIMIT 200",
+        `SELECT cp.user_id,cp.full_name,cp.profession,cp.location,cp.availability_status,
+          pd.education_level,pd.languages,pd.experience_summary,pd.skills_summary,
+          pref.best_role,pref.other_roles,pref.work_arrangement,
+          CASE WHEN pd.date_of_birth IS NULL THEN NULL ELSE TIMESTAMPDIFF(YEAR,pd.date_of_birth,CURDATE()) END age
+         FROM candidate_profiles cp
+         JOIN users u ON u.id=cp.user_id AND u.status='active'
+         JOIN candidate_verification_checks identity_check ON identity_check.candidate_user_id=cp.user_id AND identity_check.check_code='identity' AND identity_check.status='verified'
+         JOIN candidate_verification_checks phone_check ON phone_check.candidate_user_id=cp.user_id AND phone_check.check_code='phone_call' AND phone_check.status='verified'
+         LEFT JOIN candidate_private_details pd ON pd.candidate_user_id=cp.user_id
+         LEFT JOIN candidate_preferences pref ON pref.candidate_user_id=cp.user_id
+         WHERE cp.availability_status='available' LIMIT 200`,
       );
       const matches = candidates
         .map((candidate) => ({
@@ -2436,7 +2686,7 @@ app.get(
         },
         matches,
         notice:
-          "Plain-English details were normalized into role and location signals. Staff must verify every fact before sharing a shortlist.",
+          "The original employer requirements remain unchanged and visible alongside each recommendation.",
       });
     } catch (e) {
       next(e);
@@ -2841,6 +3091,108 @@ app.post(
     }
   },
 );
+app.put(
+  "/api/v1/candidate/public-profile-consent",
+  requireAuth,
+  allow("candidate"),
+  async (req, res, next) => {
+    try {
+      const { consent } = z.object({ consent: z.boolean() }).parse(req.body);
+      await db().execute(
+        "UPDATE candidate_profiles SET public_profile_consent=?,public_consent_at=IF(?=TRUE,UTC_TIMESTAMP(),NULL) WHERE user_id=?",
+        [consent, consent, req.user.id],
+      );
+      await db().execute(
+        "INSERT INTO consent_logs(user_id,subject_email,consent_type,consent_version) SELECT id,email,?,'2026-07' FROM users WHERE id=?",
+        [
+          consent
+            ? "public_candidate_profile_granted"
+            : "public_candidate_profile_withdrawn",
+          req.user.id,
+        ],
+      );
+      res.json({
+        message: consent
+          ? "Public profile permission saved."
+          : "Public profile permission withdrawn.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.post(
+  "/api/v1/staff/candidates/:candidateId/documents",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  privateUpload.single("document"),
+  async (req, res, next) => {
+    try {
+      if (!req.file)
+        return res
+          .status(400)
+          .json({ message: "Choose a PDF, JPG or PNG file up to 8 MB." });
+      const candidateId = z.coerce
+        .number()
+        .int()
+        .positive()
+        .parse(req.params.candidateId);
+      const { documentType } = z
+        .object({
+          documentType: z.enum([
+            "national_id",
+            "passport_photo",
+            "cv",
+            "certificate",
+            "recommendation",
+            "police_clearance",
+            "driving_licence",
+          ]),
+        })
+        .parse(req.body);
+      const [[candidate]] = await db().execute(
+        "SELECT user_id FROM candidate_profiles WHERE user_id=?",
+        [candidateId],
+      );
+      if (!candidate)
+        return res.status(404).json({ message: "Candidate not found." });
+      const [[existing]] = await db().execute(
+        "SELECT id,storage_key FROM candidate_documents WHERE candidate_user_id=? AND document_type=? ORDER BY created_at DESC LIMIT 1",
+        [candidateId, documentType],
+      );
+      if (existing) {
+        await db().execute(
+          "UPDATE candidate_documents SET storage_key=?,original_name=?,mime_type=?,file_size=?,status='uploaded',reviewed_by=NULL,reviewed_at=NULL,created_at=UTC_TIMESTAMP() WHERE id=?",
+          [
+            req.file.filename,
+            req.file.originalname.slice(0, 255),
+            req.file.mimetype,
+            req.file.size,
+            existing.id,
+          ],
+        );
+        void unlink(
+          path.join(uploadRoot, path.basename(existing.storage_key)),
+        ).catch(() => {});
+      } else {
+        await db().execute(
+          "INSERT INTO candidate_documents(candidate_user_id,document_type,storage_key,original_name,mime_type,file_size) VALUES(?,?,?,?,?,?)",
+          [
+            candidateId,
+            documentType,
+            req.file.filename,
+            req.file.originalname.slice(0, 255),
+            req.file.mimetype,
+            req.file.size,
+          ],
+        );
+      }
+      res.json({ message: "Candidate document saved for review." });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 app.get(
   "/api/v1/documents/:documentId/preview",
   requireAuth,
@@ -2920,7 +3272,7 @@ app.get(
   async (req, res, next) => {
     try {
       const [articles] = await db().execute(
-        "SELECT cp.id,cp.slug,cp.title,cp.excerpt,cp.status,cp.review_note,cp.updated_at,u.email author_email FROM content_posts cp JOIN users u ON u.id=cp.author_user_id WHERE ?='administrator' OR cp.author_user_id=? ORDER BY cp.updated_at DESC",
+        "SELECT cp.id,cp.slug,cp.title,cp.excerpt,cp.status,cp.review_note,cp.updated_at,u.email author_email,ci.storage_key cover_image FROM content_posts cp JOIN users u ON u.id=cp.author_user_id LEFT JOIN content_post_images ci ON ci.post_id=cp.id WHERE ?='administrator' OR cp.author_user_id=? ORDER BY cp.updated_at DESC",
         [req.user.role, req.user.id],
       );
       res.json({ articles });
@@ -3007,7 +3359,7 @@ app.get(
     try {
       const id = z.coerce.number().int().positive().parse(req.params.id);
       const [rows] = await db().execute(
-        "SELECT id,title,excerpt,content,status FROM content_posts WHERE id=? AND (?='administrator' OR author_user_id=?)",
+        "SELECT cp.id,cp.title,cp.excerpt,cp.content,cp.status,ci.storage_key cover_image FROM content_posts cp LEFT JOIN content_post_images ci ON ci.post_id=cp.id WHERE cp.id=? AND (?='administrator' OR cp.author_user_id=?)",
         [id, req.user.role, req.user.id],
       );
       if (!rows[0])

@@ -370,6 +370,10 @@ function ShortlistCandidate({ candidate }: { candidate: any }) {
 }
 function CandidateView({ data }: { data: any }) {
   const [uploadType, setUploadType] = useState("national_id");
+  const [consent, setConsent] = useState(
+    Boolean(data.profile?.public_profile_consent),
+  );
+  const [consentMessage, setConsentMessage] = useState("");
   const documentTypes: Record<string, string> = {
     identity: "national_id",
     passport_photo: "passport_photo",
@@ -501,6 +505,32 @@ function CandidateView({ data }: { data: any }) {
             ))}
           </div>
         )}
+        <label className="consent-field">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={async (event) => {
+              const nextConsent = event.target.checked;
+              setConsent(nextConsent);
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/candidate/public-profile-consent`,
+                {
+                  method: "PUT",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ consent: nextConsent }),
+                },
+              );
+              const result = await response.json();
+              setConsentMessage(result.message);
+              if (!response.ok) setConsent(!nextConsent);
+            }}
+          />
+          I agree that my approved passport photo and work-profile summary may
+          be shown on the Double M website. IDs, contacts and documents remain
+          private.
+        </label>
+        {consentMessage && <small>{consentMessage}</small>}
       </section>
       <section className="dash-panel">
         <div className="panel-heading">

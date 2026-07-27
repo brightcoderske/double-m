@@ -7,6 +7,7 @@ type Article = {
   excerpt: string;
   content: string;
   status: string;
+  cover_image?: string;
 };
 export default function EditArticle() {
   const { id } = useParams<{ id: string }>(),
@@ -53,6 +54,20 @@ export default function EditArticle() {
     setMessage(result.message);
     if (response.ok && action?.value === "submit")
       router.push("/dashboard/articles");
+  }
+  async function uploadCover(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/staff/articles/${id}/cover`,
+      {
+        method: "POST",
+        credentials: "include",
+        body: new FormData(event.currentTarget),
+      },
+    );
+    const result = await response.json();
+    setMessage(result.message);
+    if (response.ok) window.location.reload();
   }
   if (!article)
     return (
@@ -117,6 +132,24 @@ export default function EditArticle() {
           </div>
         </form>
         <section className="dash-panel contract-preview">
+          <h2>Article image</h2>
+          {article.cover_image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className="article-cover-preview"
+              src={`${process.env.NEXT_PUBLIC_API_URL}/media/articles/${article.cover_image}`}
+              alt=""
+            />
+          )}
+          <form className="document-upload" onSubmit={uploadCover}>
+            <input
+              name="image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              required
+            />
+            <button>Upload or replace image</button>
+          </form>
           <h2>Isolated preview</h2>
           <iframe title="Article preview" sandbox="" srcDoc={article.content} />
         </section>

@@ -74,6 +74,13 @@ export function AvailableCandidateRail() {
               <p>
                 <MapPin /> {candidate.location}
               </p>
+              <div className="candidate-card-facts">
+                {candidate.age && <span>{candidate.age} years</span>}
+                {candidate.languages && <span>{candidate.languages}</span>}
+                {candidate.experience_summary && (
+                  <span>{candidate.experience_summary}</span>
+                )}
+              </div>
               <button type="button" onClick={() => setSelected(candidate)}>
                 Explore summary <ChevronRight />
               </button>

@@ -44,6 +44,16 @@ export default function ReviewModeration() {
     setMessage(body.message);
     if (response.ok) await load();
   }
+  async function remove(id: number) {
+    if (!window.confirm("Delete this review?")) return;
+    const response = await fetch(`${api}/admin/reviews/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const body = await response.json();
+    setMessage(body.message);
+    if (response.ok) await load();
+  }
 
   return (
     <main className="admin-controls">
@@ -106,6 +116,12 @@ export default function ReviewModeration() {
                         onClick={() => moderate(review.id, "rejected")}
                       >
                         Reject
+                      </button>
+                      <button
+                        className="table-action danger"
+                        onClick={() => remove(review.id)}
+                      >
+                        Delete
                       </button>
                     </div>
                   </td>

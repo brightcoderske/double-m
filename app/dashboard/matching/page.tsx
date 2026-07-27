@@ -155,6 +155,7 @@ export default function Matching() {
                   <th>Candidate</th>
                   <th>Profession</th>
                   <th>Location</th>
+                  <th>Profile details</th>
                   <th>Why this match</th>
                   <th>Score</th>
                   <th>Profile</th>
@@ -188,6 +189,20 @@ export default function Matching() {
                     </td>
                     <td>{item.candidate.profession}</td>
                     <td>{item.candidate.location}</td>
+                    <td className="requirements-cell">
+                      {[
+                        item.candidate.age
+                          ? `${item.candidate.age} years`
+                          : null,
+                        item.candidate.education_level,
+                        item.candidate.languages,
+                        item.candidate.experience_summary,
+                        item.candidate.skills_summary,
+                        item.candidate.work_arrangement?.replaceAll("_", " "),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Complete profile for more details"}
+                    </td>
                     <td className="requirements-cell">
                       {item.reasons.join(" Â· ")}
                     </td>

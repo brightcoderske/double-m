@@ -68,6 +68,9 @@ export default function CandidateReview() {
           {data.profile.email}. Date of birth remains staff-only and is not used
           for matching.
         </p>
+        <Link className="button dark" href={`/dashboard/admin/users/${id}`}>
+          Edit full profile and documents
+        </Link>
       </header>
       <div className="admin-grid">
         <section className="dash-panel">

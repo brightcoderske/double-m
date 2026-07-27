@@ -79,6 +79,16 @@ export default function ManageJobs() {
     if (response.ok) await load();
     setBusy(false);
   }
+  async function removeJob(jobId: number) {
+    if (!window.confirm("Delete this job record?")) return;
+    const response = await fetch(`${api}/staff/jobs/${jobId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    const body = await response.json();
+    setMessage(body.message);
+    if (response.ok) await load();
+  }
 
   const request = editor === "new" ? null : editor;
   return (
@@ -210,21 +220,25 @@ export default function ManageJobs() {
                     </span>
                   </td>
                   <td>
-                    {job.status === "published" ? (
-                      <Link className="table-action" href="/jobs">
-                        View live
-                      </Link>
-                    ) : job.status === "draft" || job.status === "paused" ? (
-                      <button
-                        className="table-action"
-                        onClick={() => publishExisting(job.id)}
-                        disabled={busy}
-                      >
-                        Approve & publish
+                    <div className="table-button-group">
+                      {job.status === "published" ? (
+                        <Link className="table-action" href="/jobs">
+                          View live
+                        </Link>
+                      ) : (job.status === "draft" ||
+                          job.status === "paused") && (
+                        <button
+                          className="table-action"
+                          onClick={() => publishExisting(job.id)}
+                          disabled={busy}
+                        >
+                          Approve & publish
+                        </button>
+                      )}
+                      <button type="button" onClick={() => removeJob(job.id)}>
+                        Delete
                       </button>
-                    ) : (
-                      <span>Agency record</span>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}

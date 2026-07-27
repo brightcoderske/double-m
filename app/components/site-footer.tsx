@@ -71,6 +71,16 @@ export function SiteFooter() {
                   <Youtube />
                 </a>
               )}
+              {phone && (
+                <a
+                  href={whatsapp}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="WhatsApp"
+                >
+                  <MessageCircle />
+                </a>
+              )}
             </div>
           </div>
           <div>
