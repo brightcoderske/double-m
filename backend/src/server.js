@@ -943,6 +943,7 @@ app.get(
       res.setHeader("Content-Type", photo.mime_type);
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       createReadStream(
         path.join(uploadRoot, path.basename(photo.storage_key)),
       ).pipe(res);
@@ -3499,21 +3500,22 @@ app.get(
         });
       const safePath = path.join(uploadRoot, path.basename(doc.storage_key));
       res.setHeader("Content-Type", doc.mime_type);
+      const disposition = req.query.download === "1" ? "attachment" : "inline";
       res.setHeader(
         "Content-Disposition",
-        `inline; filename*=UTF-8''${encodeURIComponent(doc.original_name)}`,
+        `${disposition}; filename*=UTF-8''${encodeURIComponent(doc.original_name)}`,
       );
       res.setHeader("Cache-Control", "private, no-store");
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.removeHeader("X-Frame-Options");
       res.setHeader(
         "Content-Security-Policy",
-        `default-src 'none'; frame-ancestors ${config.FRONTEND_URL}`,
+        `default-src 'none'; frame-ancestors ${Array.from(allowedOrigins).join(" ")}`,
       );
       res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
       await db().execute(
-        "INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id) VALUES(?,'document.preview','candidate_document',?)",
-        [req.user.id, String(id)],
+        "INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id,metadata) VALUES(?,'document.access','candidate_document',?,JSON_OBJECT('mode',?))",
+        [req.user.id, String(id), disposition],
       );
       createReadStream(safePath).on("error", next).pipe(res);
     } catch (e) {

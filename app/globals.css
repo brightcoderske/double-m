@@ -108,6 +108,118 @@
 .candidate-next-step {
   border-left: 4px solid var(--brand);
 }
+.approval-register td {
+  vertical-align: middle;
+}
+.approval-register td small,
+.document-approval-table td small {
+  display: block;
+  margin-top: 0.22rem;
+  color: var(--muted);
+}
+.table-name-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--brand);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.candidate-review-modal {
+  width: min(1050px, calc(100vw - 2rem));
+}
+.candidate-review-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 1rem 1.2rem;
+  background: #f5f8f6;
+}
+.candidate-review-facts span {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.72rem;
+  border: 1px solid #e0e6e2;
+  border-radius: 0.7rem;
+  background: #fff;
+  font-weight: 750;
+}
+.candidate-review-facts small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.modal-table-wrap {
+  overflow: auto;
+  padding: 0 1.2rem 1rem;
+}
+.document-preview-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+}
+.document-preview-button img {
+  width: 62px;
+  height: 48px;
+  object-fit: cover;
+  border: 1px solid #d9dfdc;
+  border-radius: 0.5rem;
+}
+.document-preview-modal {
+  width: min(960px, calc(100vw - 2rem));
+  height: min(820px, calc(100vh - 2rem));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(15, 20, 18, 0.28);
+}
+.document-preview-modal header,
+.document-preview-modal footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid #e3e8e5;
+}
+.document-preview-modal footer {
+  justify-content: flex-end;
+  border-top: 1px solid #e3e8e5;
+  border-bottom: 0;
+}
+.document-preview-modal header h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+}
+.document-preview-modal iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #eef1ef;
+}
+@media (max-width: 700px) {
+  .candidate-review-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+  .candidate-review-modal {
+    width: 100%;
+  }
+  .document-preview-modal {
+    width: 100%;
+    height: 92vh;
+    border-radius: 1rem 1rem 0 0;
+  }
+}
 @media (max-width: 760px) {
   .table-filters,
   .profile-editor-grid {
