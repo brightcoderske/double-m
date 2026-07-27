@@ -24,6 +24,46 @@ function frame(preview, heading, body, cta, href) {
   return `<!doctype html><html><body style="margin:0;background:#f5f1eb;font-family:Arial,sans-serif;color:#211723"><div style="display:none">${escape(preview)}</div><div style="max-width:620px;margin:auto;padding:36px 20px"><div style="background:#4b174d;padding:24px 30px;color:white;border-radius:16px 16px 0 0"><b style="letter-spacing:2px">DOUBLE M AGENCY</b></div><div style="background:white;padding:36px 30px;border-radius:0 0 16px 16px"><h1 style="font-family:Georgia,serif;font-size:32px;margin:0 0 18px">${escape(heading)}</h1>${body}<a href="${href}" style="display:inline-block;margin-top:22px;background:#d81b72;color:white;text-decoration:none;padding:14px 20px;border-radius:8px;font-weight:bold">${escape(cta)}</a><p style="margin-top:30px;color:#736b75;font-size:13px;line-height:1.6">Questions? Reply to this email and our team will help. Double M Agency will never promise a job or request payment through an unofficial contact.</p></div></div></body></html>`;
 }
 export const templates = {
+  verifyEmail: (name, url) => ({
+    subject: "Verify your Double M Agency email",
+    html: frame(
+      "Confirm your email to protect your account",
+      `Welcome, ${name}`,
+      `<p style="line-height:1.7">Confirm that this email belongs to you before signing in. This link expires in 24 hours.</p>`,
+      "Verify my email",
+      url,
+    ),
+  }),
+  candidateNeedsAttention: (name, note) => ({
+    subject: "Your Double M profile needs attention",
+    html: frame(
+      "Complete the requested profile items",
+      name,
+      `<p style="line-height:1.7">${escape(note)}</p><p style="line-height:1.7">Sign in to upload or replace the requested documents.</p>`,
+      "Open my profile",
+      `${config.APP_URL}/dashboard`,
+    ),
+  }),
+  candidateApproved: (name) => ({
+    subject: "Your Double M profile is approved",
+    html: frame(
+      "Your candidate profile is approved",
+      name,
+      `<p style="line-height:1.7">You can now apply for suitable published jobs. Your public profile will appear only if you have separately granted publication permission.</p>`,
+      "View available jobs",
+      `${config.APP_URL}/dashboard`,
+    ),
+  }),
+  candidateApprovalAlert: (name, email, url) => ({
+    subject: `Candidate awaiting review: ${name}`,
+    html: frame(
+      "A candidate profile needs review",
+      name,
+      `<p style="line-height:1.7"><b>${escape(email)}</b> has registered and verified their email. Review their profile and documents.</p>`,
+      "Review candidate",
+      url,
+    ),
+  }),
   candidateWelcome: (name) => ({
     subject: "Welcome to Double M Agency — your profile starts here",
     html: frame(

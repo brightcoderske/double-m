@@ -51,6 +51,7 @@ for (const file of [
   "009_public_review_submissions.sql",
   "010_candidate_profile_card_details.sql",
   "011_candidate_public_consent.sql",
+  "012_account_verification_and_approval.sql",
 ]) {
   const [[applied]] = await admin.query(
     "SELECT COUNT(*) total FROM schema_migrations WHERE filename=?",

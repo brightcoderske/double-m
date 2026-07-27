@@ -1,10 +1,8 @@
 "use client";
 import { FormEvent, useState } from "react";
 import { PasswordField } from "./password-field";
-import Link from "next/link";
 export function EmployerAccountForm() {
   const [status, setStatus] = useState("");
-  const [complete, setComplete] = useState(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("Sending…");
@@ -25,10 +23,9 @@ export function EmployerAccountForm() {
       const b = await r.json();
       setStatus(
         r.ok
-          ? "Your account is ready. Check your email for a welcome message."
+          ? "Account created. Check your email and verify it before signing in."
           : b.issues?.[0]?.message || b.message || "Registration failed.",
       );
-      setComplete(r.ok);
     } catch {
       setStatus("We could not connect securely. Please try again.");
     }
@@ -46,7 +43,14 @@ export function EmployerAccountForm() {
         </label>
         <label>
           Phone
-          <input name="phone" required />
+          <input
+            name="phone"
+            inputMode="numeric"
+            pattern="0[0-9]{9}"
+            maxLength={10}
+            placeholder="0712345678"
+            required
+          />
         </label>
       </div>
       <label>
@@ -72,11 +76,6 @@ export function EmployerAccountForm() {
       </label>
       <button className="button dark">Create employer workspace</button>
       {status && <p aria-live="polite">{status}</p>}
-      {complete && (
-        <Link className="button dark" href="/login">
-          Proceed to login
-        </Link>
-      )}
     </form>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 import { FormEvent, useState } from "react";
 import { PasswordField } from "./password-field";
-import Link from "next/link";
 
 export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">(
@@ -49,11 +48,6 @@ export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
             ? "Check your email to verify your account and continue your profile."
             : "Our team will review your request and contact you through your preferred channel."}
         </p>
-        {kind === "candidate" && (
-          <Link className="button dark" href="/login">
-            Proceed to login
-          </Link>
-        )}
       </div>
     );
   return (
@@ -65,7 +59,16 @@ export function PublicForm({ kind }: { kind: "candidate" | "employer" }) {
         </label>
         <label>
           Phone number
-          <input name="phone" autoComplete="tel" required />
+          <input
+            name="phone"
+            autoComplete="tel"
+            inputMode="numeric"
+            pattern="0[0-9]{9}"
+            maxLength={10}
+            placeholder="0712345678"
+            title="Enter 10 digits starting with 0."
+            required
+          />
         </label>
       </div>
       <label>

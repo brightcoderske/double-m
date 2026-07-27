@@ -68,6 +68,11 @@ const roleItems: Record<string, NavItem[]> = {
       label: "Candidates & matching",
       icon: BriefcaseBusiness,
     },
+    {
+      href: "/dashboard/candidates/pending",
+      label: "Candidate approvals",
+      icon: ShieldCheck,
+    },
     { href: "/dashboard/jobs", label: "Job requests", icon: ClipboardList },
     { href: "/dashboard/contracts", label: "Contracts", icon: FileCheck2 },
     { href: "/dashboard/finance", label: "Payments", icon: CreditCard },
@@ -78,6 +83,11 @@ const roleItems: Record<string, NavItem[]> = {
       href: "/dashboard/matching",
       label: "Candidates & matching",
       icon: BriefcaseBusiness,
+    },
+    {
+      href: "/dashboard/candidates/pending",
+      label: "Candidate approvals",
+      icon: ShieldCheck,
     },
     { href: "/dashboard/jobs", label: "Job requests", icon: ClipboardList },
     { href: "/dashboard/contracts", label: "Contracts", icon: FileCheck2 },

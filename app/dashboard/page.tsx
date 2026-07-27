@@ -398,6 +398,30 @@ function CandidateView({ data }: { data: any }) {
           matching.
         </p>
       </div>
+      <section className="dash-panel candidate-next-step">
+        <div className="panel-heading">
+          <div>
+            <span>Next step</span>
+            <h2>
+              {data.profile?.profile_completion < 70
+                ? "Complete your profile"
+                : data.profile?.agency_approval_status !== "approved"
+                  ? "Complete document review"
+                  : "Apply for suitable jobs"}
+            </h2>
+          </div>
+          <span className={`table-status status-${data.profile?.agency_approval_status}`}>
+            {(data.profile?.agency_approval_status || "pending").replaceAll("_", " ")}
+          </span>
+        </div>
+        <p>
+          {data.profile?.agency_approval_note ||
+            "Add your work preferences, then upload your National ID and passport-sized photo."}
+        </p>
+        <Link className="table-action" href="/dashboard/preferences">
+          Update my profile
+        </Link>
+      </section>
       <div className="metric-grid">
         <Metric
           title="Availability"
@@ -652,6 +676,11 @@ function StaffView({ data }: { data: any }) {
         <Metric title="Open requests" value={m.openRequests || 0} />
         <Metric title="Published jobs" value={m.publishedJobs || 0} />
         <Metric title="Emails queued" value={m.pendingEmails || 0} />
+        <Link className="metric metric-link" href="/dashboard/candidates/pending">
+          <span>Candidate approvals</span>
+          <strong>{m.pendingApprovals || 0}</strong>
+          <small>Open review queue</small>
+        </Link>
       </div>
       <div className="workspace-grid">
         <Panel

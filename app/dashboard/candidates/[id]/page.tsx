@@ -51,6 +51,39 @@ export default function CandidateReview() {
     setMessage(body.message);
     if (r.ok) void load();
   }
+  async function reviewDocument(documentId: number, status: string) {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/staff/documents/${documentId}/status`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      },
+    );
+    const body = await response.json();
+    setMessage(body.message);
+    if (response.ok) void load();
+  }
+  async function reviewCandidate(status: string) {
+    const note =
+      status === "needs_documents"
+        ? window.prompt("What should the candidate upload or correct?") || ""
+        : "";
+    if (status === "needs_documents" && !note) return;
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/staff/candidates/${id}/approval`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, note }),
+      },
+    );
+    const body = await response.json();
+    setMessage(body.message);
+    if (response.ok) void load();
+  }
   if (!data)
     return (
       <main className="admin-controls">
@@ -71,6 +104,14 @@ export default function CandidateReview() {
         <Link className="button dark" href={`/dashboard/admin/users/${id}`}>
           Edit full profile and documents
         </Link>
+        <div className="table-button-group">
+          <button onClick={() => reviewCandidate("approved")}>
+            Approve candidate
+          </button>
+          <button onClick={() => reviewCandidate("needs_documents")}>
+            Request documents
+          </button>
+        </div>
       </header>
       <div className="admin-grid">
         <section className="dash-panel">
@@ -104,6 +145,15 @@ export default function CandidateReview() {
           <div className="simple-rows">
             {data.documents.map((doc: any) => (
               <div key={doc.id}>
+                {doc.mime_type?.startsWith("image/") && (
+                  // Protected image thumbnail; full document opens in a new tab.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    className="document-thumbnail"
+                    src={`${process.env.NEXT_PUBLIC_API_URL}/documents/${doc.id}/preview`}
+                    alt=""
+                  />
+                )}
                 <b>
                   {doc.document_type.replaceAll("_", " ")}
                   <small>{doc.original_name}</small>
@@ -115,6 +165,14 @@ export default function CandidateReview() {
                 >
                   Preview
                 </a>
+                <div className="table-button-group">
+                  <button onClick={() => reviewDocument(doc.id, "verified")}>
+                    Approve
+                  </button>
+                  <button onClick={() => reviewDocument(doc.id, "rejected")}>
+                    Reject
+                  </button>
+                </div>
               </div>
             ))}
           </div>

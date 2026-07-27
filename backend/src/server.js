@@ -144,6 +144,21 @@ async function tokenFor(user) {
     .setExpirationTime("8h")
     .sign(secret);
 }
+async function refreshCandidateCompletion(userId) {
+  await db().execute(
+    `UPDATE candidate_profiles cp
+     LEFT JOIN candidate_preferences pref ON pref.candidate_user_id=cp.user_id
+     SET cp.profile_completion=LEAST(100,
+       30
+       + IF(cp.phone REGEXP '^0[0-9]{9}$',10,0)
+       + IF(cp.profession<>'' AND cp.location<>'',15,0)
+       + IF(pref.best_role IS NOT NULL AND pref.best_role<>'',15,0)
+       + IF(EXISTS(SELECT 1 FROM candidate_documents d WHERE d.candidate_user_id=cp.user_id AND d.document_type='national_id'),15,0)
+       + IF(EXISTS(SELECT 1 FROM candidate_documents d WHERE d.candidate_user_id=cp.user_id AND d.document_type='passport_photo'),15,0))
+     WHERE cp.user_id=?`,
+    [userId],
+  );
+}
 async function requireAuth(req, res, next) {
   try {
     const raw = req.cookies.dm_session;
@@ -187,7 +202,10 @@ const strongPassword = z
   .regex(/[0-9]/, "Password must include a number.");
 const registration = z.object({
   fullName: z.string().trim().min(2).max(150),
-  phone: z.string().trim().min(7).max(30),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^0\d{9}$/, "Use a 10-digit phone number such as 0712345678."),
   email: z
     .string()
     .email()
@@ -202,6 +220,11 @@ const registration = z.object({
 app.post("/api/v1/auth/register", authLimiter, async (req, res, next) => {
   try {
     const v = registration.parse(req.body),
+      verificationToken = crypto.randomBytes(32).toString("hex"),
+      verificationHash = crypto
+        .createHash("sha256")
+        .update(verificationToken)
+        .digest("hex"),
       hash = await argon2.hash(v.password, {
         type: argon2.argon2id,
         memoryCost: 19456,
@@ -247,14 +270,21 @@ app.post("/api/v1/auth/register", authLimiter, async (req, res, next) => {
             .digest("hex"),
         ],
       );
+      await conn.execute(
+        "INSERT INTO email_verification_tokens(user_id,token_hash,expires_at) VALUES(?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 24 HOUR))",
+        [r.insertId, verificationHash],
+      );
       await conn.commit();
       void queueEmail(
         v.email,
-        v.accountType === "candidate"
-          ? templates.candidateWelcome(v.fullName)
-          : templates.employerWelcome(v.fullName),
+        templates.verifyEmail(
+          v.fullName,
+          `${config.APP_URL}/verify-email?token=${verificationToken}`,
+        ),
       );
-      res.status(201).json({ message: "Account created successfully." });
+      res.status(201).json({
+        message: "Account created. Verify your email before signing in.",
+      });
     } catch (e) {
       await conn.rollback();
       if (e.code === "ER_DUP_ENTRY")
@@ -269,6 +299,72 @@ app.post("/api/v1/auth/register", authLimiter, async (req, res, next) => {
     next(e);
   }
 });
+app.post("/api/v1/auth/verify-email", authLimiter, async (req, res, next) => {
+  try {
+    const { token } = z.object({ token: z.string().length(64) }).parse(req.body);
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const connection = await db().getConnection();
+    let verifiedUser;
+    try {
+      await connection.beginTransaction();
+      [[verifiedUser]] = await connection.execute(
+        `SELECT u.id,u.email,u.role,COALESCE(cp.full_name,ep.full_name,u.email) full_name
+         FROM email_verification_tokens evt
+         JOIN users u ON u.id=evt.user_id
+         LEFT JOIN candidate_profiles cp ON cp.user_id=u.id
+         LEFT JOIN employer_profiles ep ON ep.user_id=u.id
+         WHERE evt.token_hash=? AND evt.used_at IS NULL AND evt.expires_at>UTC_TIMESTAMP()
+         FOR UPDATE`,
+        [tokenHash],
+      );
+      if (!verifiedUser) {
+        await connection.rollback();
+        return res.status(400).json({
+          message: "This verification link is invalid or has expired.",
+        });
+      }
+      await connection.execute(
+        "UPDATE users SET email_verified_at=UTC_TIMESTAMP() WHERE id=?",
+        [verifiedUser.id],
+      );
+      await connection.execute(
+        "UPDATE email_verification_tokens SET used_at=UTC_TIMESTAMP() WHERE token_hash=?",
+        [tokenHash],
+      );
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+    if (verifiedUser.role === "candidate") {
+      const [recipients] = await db().query(
+        `SELECT email FROM users WHERE role='administrator' AND status='active'
+         UNION SELECT COALESCE((SELECT setting_value FROM site_settings WHERE setting_key='contact_email' LIMIT 1),'support@doublemagency.co.ke') email`,
+      );
+      for (const recipient of new Set(recipients.map((item) => item.email))) {
+        void queueEmail(
+          recipient,
+          templates.candidateApprovalAlert(
+            verifiedUser.full_name,
+            verifiedUser.email,
+            `${config.APP_URL}/dashboard/candidates/pending`,
+          ),
+        );
+      }
+    }
+    void queueEmail(
+      verifiedUser.email,
+      verifiedUser.role === "candidate"
+        ? templates.candidateWelcome(verifiedUser.full_name)
+        : templates.employerWelcome(verifiedUser.full_name),
+    );
+    res.json({ message: "Email verified. You can now sign in." });
+  } catch (error) {
+    next(error);
+  }
+});
 app.post("/api/v1/auth/login", authLimiter, async (req, res, next) => {
   try {
     const v = z
@@ -281,7 +377,7 @@ app.post("/api/v1/auth/login", authLimiter, async (req, res, next) => {
       })
       .parse(req.body);
     const [rows] = await db().execute(
-      "SELECT id,email,password_hash,role,status,force_password_change FROM users WHERE email=? LIMIT 1",
+      "SELECT id,email,password_hash,role,status,email_verified_at,force_password_change FROM users WHERE email=? LIMIT 1",
       [v.email],
     );
     const user = rows[0];
@@ -295,6 +391,13 @@ app.post("/api/v1/auth/login", authLimiter, async (req, res, next) => {
         .json({ message: "Email or password is incorrect." });
     if (user.status !== "active")
       return res.status(403).json({ message: "Account access is restricted." });
+    if (
+      ["candidate", "employer"].includes(user.role) &&
+      !user.email_verified_at
+    )
+      return res.status(403).json({
+        message: "Verify your email before signing in.",
+      });
     res.cookie("dm_session", await tokenFor(user), cookie);
     await db().execute(
       "INSERT INTO audit_logs(actor_user_id,action,entity_type,entity_id) VALUES(?,'auth.login','user',?)",
@@ -314,6 +417,7 @@ app.post("/api/v1/auth/login", authLimiter, async (req, res, next) => {
 app.post("/api/v1/auth/google", authLimiter, async (req, res, next) => {
   const connection = await db().getConnection();
   let welcomeMessage = null;
+  let newCandidateName = null;
   try {
     if (!config.GOOGLE_CLIENT_ID)
       return res
@@ -377,6 +481,7 @@ app.post("/api/v1/auth/google", authLimiter, async (req, res, next) => {
         v.role === "candidate"
           ? templates.candidateWelcome(name)
           : templates.employerWelcome(name);
+      if (v.role === "candidate") newCandidateName = name;
     } else {
       if (existing.status !== "active") {
         await connection.rollback();
@@ -392,6 +497,23 @@ app.post("/api/v1/auth/google", authLimiter, async (req, res, next) => {
     }
     await connection.commit();
     if (welcomeMessage) void queueEmail(email, welcomeMessage);
+    if (newCandidateName) {
+      const [recipients] = await db().query(
+        `SELECT email FROM users WHERE role='administrator' AND status='active'
+         UNION SELECT COALESCE((SELECT setting_value FROM site_settings WHERE setting_key='contact_email' LIMIT 1),'support@doublemagency.co.ke') email`,
+      );
+      for (const recipient of new Map(
+        recipients.map((item) => [item.email, item]),
+      ).values())
+        void queueEmail(
+          recipient.email,
+          templates.candidateApprovalAlert(
+            newCandidateName,
+            email,
+            `${config.APP_URL}/dashboard/candidates/pending`,
+          ),
+        );
+    }
     res.cookie("dm_session", await tokenFor(user), cookie);
     res.json({
       user: {
@@ -465,7 +587,7 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
       data = { requests, payments, placements, replacements, shortlist };
     } else if (u.role === "candidate") {
       const [profiles] = await db().execute(
-        "SELECT full_name,profession,location,availability_status,profile_completion,public_profile_consent FROM candidate_profiles WHERE user_id=?",
+        "SELECT full_name,profession,location,availability_status,profile_completion,public_profile_consent,agency_approval_status,agency_approval_note FROM candidate_profiles WHERE user_id=?",
         [u.id],
       );
       const [jobs] = await db().execute(
@@ -506,7 +628,7 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
         payments,
       };
     } else {
-      const [[candidates], [requests], [jobs], [outbox]] = await Promise.all([
+      const [[candidates], [requests], [jobs], [outbox], [approvals]] = await Promise.all([
         db().query("SELECT COUNT(*) total FROM users WHERE role='candidate'"),
         db().query(
           "SELECT COUNT(*) total FROM staffing_requests WHERE status IN ('new','contacted','confirmed','matching')",
@@ -515,6 +637,9 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
         db().query(
           "SELECT COUNT(*) total FROM email_outbox WHERE status='pending'",
         ),
+        db().query(
+          "SELECT COUNT(*) total FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id AND u.status='active' WHERE u.email_verified_at IS NOT NULL AND cp.agency_approval_status<>'approved'",
+        ),
       ]);
       data = {
         metrics: {
@@ -522,6 +647,7 @@ app.get("/api/v1/dashboard", requireAuth, async (req, res, next) => {
           openRequests: requests[0].total,
           publishedJobs: jobs[0].total,
           pendingEmails: outbox[0].total,
+          pendingApprovals: approvals[0].total,
         },
       };
     }
@@ -781,6 +907,7 @@ app.get("/api/v1/public/candidates", async (_req, res, next) => {
        LEFT JOIN candidate_documents photo ON photo.id=(SELECT cd.id FROM candidate_documents cd WHERE cd.candidate_user_id=cp.user_id AND cd.document_type='passport_photo' AND cd.status='verified' ORDER BY cd.created_at DESC LIMIT 1)
        WHERE cp.availability_status IN ('available','available_from')
          AND cp.public_profile_consent=TRUE
+         AND cp.agency_approval_status='approved'
        ORDER BY cp.updated_at DESC LIMIT 24`,
     );
     res.json({ candidates });
@@ -805,6 +932,7 @@ app.get(
        WHERE cd.candidate_user_id=? AND cd.document_type='passport_photo' AND cd.status='verified'
          AND cp.availability_status IN ('available','available_from')
          AND cp.public_profile_consent=TRUE
+         AND cp.agency_approval_status='approved'
        ORDER BY cd.created_at DESC LIMIT 1`,
         [candidateId],
       );
@@ -1236,6 +1364,27 @@ app.post(
   async (req, res, next) => {
     try {
       const id = z.coerce.number().int().positive().parse(req.params.jobId);
+      const [[readiness]] = await db().execute(
+        `SELECT cp.agency_approval_status,cp.profile_completion,
+          (cp.phone REGEXP '^0[0-9]{9}$') phone_ready,
+          EXISTS(SELECT 1 FROM candidate_documents cd WHERE cd.candidate_user_id=cp.user_id AND cd.document_type='national_id' AND cd.status='verified') id_ready,
+          EXISTS(SELECT 1 FROM candidate_documents cd WHERE cd.candidate_user_id=cp.user_id AND cd.document_type='passport_photo' AND cd.status='verified') photo_ready
+         FROM candidate_profiles cp WHERE cp.user_id=?`,
+        [req.user.id],
+      );
+      const missing = [];
+      if (!readiness?.phone_ready) missing.push("a valid phone number");
+      if (!readiness?.id_ready) missing.push("an approved National ID");
+      if (!readiness?.photo_ready) missing.push("an approved passport photo");
+      if (Number(readiness?.profile_completion || 0) < 70)
+        missing.push("a completed profile");
+      if (readiness?.agency_approval_status !== "approved")
+        missing.push("agency profile approval");
+      if (missing.length)
+        return res.status(403).json({
+          message: `Before applying, complete: ${missing.join(", ")}.`,
+          missing,
+        });
       const [jobs] = await db().execute(
         "SELECT id FROM jobs WHERE id=? AND status='published' AND (application_deadline IS NULL OR application_deadline>=UTC_TIMESTAMP())",
         [id],
@@ -2582,13 +2731,14 @@ app.post(
         );
         if (v.role === "candidate") {
           await conn.execute(
-            "INSERT INTO candidate_profiles(user_id,full_name,phone,profession,location) VALUES(?,?,?,?,?)",
+            "INSERT INTO candidate_profiles(user_id,full_name,phone,profession,location,agency_approval_status,agency_reviewed_by,agency_reviewed_at) VALUES(?,?,?,?,?,'approved',?,UTC_TIMESTAMP())",
             [
               created.insertId,
               v.fullName,
               v.phone,
               v.profession || "Not specified",
               v.location,
+              req.user.id,
             ],
           );
           await conn.execute(
@@ -2832,7 +2982,7 @@ app.get(
         .parse(req.params.candidateId);
       const [[profiles], [documents], [checks]] = await Promise.all([
         db().execute(
-          "SELECT cp.user_id,cp.full_name,cp.phone,cp.profession,cp.location,cp.availability_status,cp.profile_completion,cd.date_of_birth,cd.education_level,u.email,u.status FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id LEFT JOIN candidate_private_details cd ON cd.candidate_user_id=cp.user_id WHERE cp.user_id=?",
+          "SELECT cp.user_id,cp.full_name,cp.phone,cp.profession,cp.location,cp.availability_status,cp.profile_completion,cp.agency_approval_status,cp.agency_approval_note,cd.date_of_birth,cd.education_level,u.email,u.status,u.email_verified_at FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id LEFT JOIN candidate_private_details cd ON cd.candidate_user_id=cp.user_id WHERE cp.user_id=?",
           [id],
         ),
         db().execute(
@@ -2849,6 +2999,108 @@ app.get(
       res.json({ profile: profiles[0], documents, checks });
     } catch (e) {
       next(e);
+    }
+  },
+);
+app.get(
+  "/api/v1/staff/candidate-approvals",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (_req, res, next) => {
+    try {
+      const [candidates] = await db().query(
+        `SELECT cp.user_id,cp.full_name,cp.phone,cp.profession,cp.location,
+          cp.profile_completion,cp.agency_approval_status,cp.agency_approval_note,
+          u.email,u.email_verified_at,u.created_at,
+          COUNT(cd.id) document_count,
+          SUM(cd.status='verified') verified_document_count
+         FROM candidate_profiles cp
+         JOIN users u ON u.id=cp.user_id AND u.status='active'
+         LEFT JOIN candidate_documents cd ON cd.candidate_user_id=cp.user_id
+         WHERE u.email_verified_at IS NOT NULL AND cp.agency_approval_status<>'approved'
+         GROUP BY cp.user_id,u.id
+         ORDER BY u.created_at ASC`,
+      );
+      res.json({ candidates });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.put(
+  "/api/v1/staff/candidates/:candidateId/approval",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (req, res, next) => {
+    try {
+      const candidateId = z.coerce.number().int().positive().parse(req.params.candidateId);
+      const value = z.object({
+        status: z.enum(["pending", "needs_documents", "approved", "declined"]),
+        note: z.string().max(500).optional(),
+      }).parse(req.body);
+      const [[candidate]] = await db().execute(
+        "SELECT cp.full_name,u.email FROM candidate_profiles cp JOIN users u ON u.id=cp.user_id WHERE cp.user_id=?",
+        [candidateId],
+      );
+      if (!candidate) return res.status(404).json({ message: "Candidate not found." });
+      await db().execute(
+        "UPDATE candidate_profiles SET agency_approval_status=?,agency_approval_note=?,agency_reviewed_by=?,agency_reviewed_at=UTC_TIMESTAMP() WHERE user_id=?",
+        [value.status, value.note || null, req.user.id, candidateId],
+      );
+      if (value.status === "needs_documents" && value.note) {
+        await db().execute(
+          "INSERT INTO candidate_messages(candidate_user_id,title,message,message_type,created_by) VALUES(?,'Profile needs attention',?,'action_required',?)",
+          [candidateId, value.note, req.user.id],
+        );
+        void queueEmail(candidate.email, templates.candidateNeedsAttention(candidate.full_name, value.note));
+      }
+      if (value.status === "approved")
+        void queueEmail(candidate.email, templates.candidateApproved(candidate.full_name));
+      res.json({ message: value.status === "approved" ? "Candidate approved." : "Candidate status updated." });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+app.put(
+  "/api/v1/staff/documents/:documentId/status",
+  requireAuth,
+  allow("administrator", "agency_staff"),
+  async (req, res, next) => {
+    try {
+      const documentId = z.coerce.number().int().positive().parse(req.params.documentId);
+      const { status } = z.object({
+        status: z.enum(["under_review", "verified", "rejected"]),
+      }).parse(req.body);
+      const [[document]] = await db().execute(
+        "SELECT candidate_user_id,document_type FROM candidate_documents WHERE id=?",
+        [documentId],
+      );
+      if (!document) return res.status(404).json({ message: "Document not found." });
+      await db().execute(
+        "UPDATE candidate_documents SET status=?,reviewed_by=?,reviewed_at=UTC_TIMESTAMP() WHERE id=?",
+        [status, req.user.id, documentId],
+      );
+      const checkCode = {
+        national_id: "identity",
+        passport_photo: "passport_photo",
+        cv: "cv",
+        certificate: "certificates",
+      }[document.document_type];
+      if (checkCode)
+        await db().execute(
+          "INSERT INTO candidate_verification_checks(candidate_user_id,check_code,status,updated_by) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status),updated_by=VALUES(updated_by)",
+          [
+            document.candidate_user_id,
+            checkCode,
+            status === "verified" ? "verified" : "needs_attention",
+            req.user.id,
+          ],
+        );
+      await refreshCandidateCompletion(document.candidate_user_id);
+      res.json({ message: `Document marked ${status.replaceAll("_", " ")}.` });
+    } catch (error) {
+      next(error);
     }
   },
 );
@@ -2939,6 +3191,7 @@ app.put(
           v.willingToRelocate,
         ],
       );
+      await refreshCandidateCompletion(req.user.id);
       res.json({
         message:
           "Work preferences updated. Future matching will use these details.",
@@ -3081,6 +3334,7 @@ app.post(
           ],
         );
       }
+      await refreshCandidateCompletion(req.user.id);
       res.status(201).json({
         message: existing
           ? "The previous copy was replaced and the new document is ready for review."
@@ -3160,14 +3414,19 @@ app.post(
         "SELECT id,storage_key FROM candidate_documents WHERE candidate_user_id=? AND document_type=? ORDER BY created_at DESC LIMIT 1",
         [candidateId, documentType],
       );
+      const uploadStatus =
+        req.user.role === "administrator" ? "verified" : "uploaded";
       if (existing) {
         await db().execute(
-          "UPDATE candidate_documents SET storage_key=?,original_name=?,mime_type=?,file_size=?,status='uploaded',reviewed_by=NULL,reviewed_at=NULL,created_at=UTC_TIMESTAMP() WHERE id=?",
+          "UPDATE candidate_documents SET storage_key=?,original_name=?,mime_type=?,file_size=?,status=?,reviewed_by=?,reviewed_at=IF(?='verified',UTC_TIMESTAMP(),NULL),created_at=UTC_TIMESTAMP() WHERE id=?",
           [
             req.file.filename,
             req.file.originalname.slice(0, 255),
             req.file.mimetype,
             req.file.size,
+            uploadStatus,
+            uploadStatus === "verified" ? req.user.id : null,
+            uploadStatus,
             existing.id,
           ],
         );
@@ -3176,7 +3435,7 @@ app.post(
         ).catch(() => {});
       } else {
         await db().execute(
-          "INSERT INTO candidate_documents(candidate_user_id,document_type,storage_key,original_name,mime_type,file_size) VALUES(?,?,?,?,?,?)",
+          "INSERT INTO candidate_documents(candidate_user_id,document_type,storage_key,original_name,mime_type,file_size,status,reviewed_by,reviewed_at) VALUES(?,?,?,?,?,?,?,?,IF(?='verified',UTC_TIMESTAMP(),NULL))",
           [
             candidateId,
             documentType,
@@ -3184,10 +3443,30 @@ app.post(
             req.file.originalname.slice(0, 255),
             req.file.mimetype,
             req.file.size,
+            uploadStatus,
+            uploadStatus === "verified" ? req.user.id : null,
+            uploadStatus,
           ],
         );
       }
-      res.json({ message: "Candidate document saved for review." });
+      await refreshCandidateCompletion(candidateId);
+      const checkCode = {
+        national_id: "identity",
+        passport_photo: "passport_photo",
+        cv: "cv",
+        certificate: "certificates",
+      }[documentType];
+      if (uploadStatus === "verified" && checkCode)
+        await db().execute(
+          "INSERT INTO candidate_verification_checks(candidate_user_id,check_code,status,updated_by) VALUES(?,?,'verified',?) ON DUPLICATE KEY UPDATE status='verified',updated_by=VALUES(updated_by)",
+          [candidateId, checkCode, req.user.id],
+        );
+      res.json({
+        message:
+          uploadStatus === "verified"
+            ? "Candidate document uploaded and approved."
+            : "Candidate document uploaded for administrator review.",
+      });
     } catch (error) {
       next(error);
     }
